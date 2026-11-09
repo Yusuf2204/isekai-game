@@ -1,0 +1,26 @@
+# Databases (development and test)
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+
+# Node
+node_modules/
+dist/
+
+# Coverage
+.coverage
+htmlcov/
+
+
+# Local AI configuration
+opencode.json
