@@ -119,7 +119,11 @@ async def close_db() -> None:
 
 @asynccontextmanager
 async def get_session() -> AsyncSession:
-    """Get a database session."""
+    """Get a database session that owns the transaction boundary.
+
+    Commits on success and rolls back on failure. Services and endpoints must
+    flush only and leave commit/rollback to this context manager.
+    """
     async with async_session_factory() as session:
         try:
             yield session

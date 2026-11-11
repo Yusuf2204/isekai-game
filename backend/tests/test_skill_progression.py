@@ -1,6 +1,7 @@
 """Tests for skill XP and level progression system."""
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -21,7 +22,12 @@ async def _setup_db():
     await recreate_db()
     async with get_session() as session:
         await seed_world(session)
-        return session
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _prepared_database():
+    """Recreate and seed the test database before each test."""
+    await _setup_db()
 
 
 async def _create_character_with_session(

@@ -252,7 +252,7 @@ async def travel_to_location(
     if len(gameplay_state.recent_activities) > 20:
         gameplay_state.recent_activities = gameplay_state.recent_activities[-20:]
 
-    await session.commit()
+    await session.flush()
     await session.refresh(gameplay_state)
 
     return {

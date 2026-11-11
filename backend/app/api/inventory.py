@@ -127,8 +127,6 @@ async def use_item_endpoint(
             session, character, request.item_name, request.quantity
         )
 
-        await session.commit()
-
         return UseItemResponse(
             success=True,
             message=f"Used {request.quantity}x {request.item_name}",
@@ -302,8 +300,6 @@ async def treat_condition_endpoint(
             condition_id=condition_id,
             treatment_id=request.treatment_id,
         )
-
-        await session.commit()
 
         return TreatmentResponse(**result)
 

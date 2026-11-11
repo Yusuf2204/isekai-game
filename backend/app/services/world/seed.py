@@ -3,8 +3,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ValidationError
 from app.models.world import Kingdom, Region, Location, Race, Background, Enemy
-from app.models.enums import RegionName, RaceName, BackgroundName, EnemyType
+from app.models.enums import (
+    RegionName,
+    RaceName,
+    BackgroundName,
+    EnemyType,
+    SkillName,
+)
 
 
 # Kingdom data
@@ -619,7 +626,7 @@ BACKGROUNDS_DATA = [
         "intelligence_bonus": 0,
         "vitality_bonus": 0,
         "luck_bonus": 1,
-        "starting_skills": {"survival": 2, "stealth": 1},
+        "starting_skills": {"survival": 2, "negotiation": 1},
         "reputation_modifier": -1,
         "noble_favor": -2,
         "common_favor": 1,
@@ -1001,8 +1008,31 @@ async def seed_races(session: AsyncSession) -> list[Race]:
     return races
 
 
+def validate_background_skills(
+    backgrounds_data: list[dict] | None = None,
+) -> None:
+    """Validate all background starting skills against SkillName."""
+    data = BACKGROUNDS_DATA if backgrounds_data is None else backgrounds_data
+    valid_skills = {skill.value for skill in SkillName}
+
+    for bg_data in data:
+        bg_name = bg_data["name"].value
+        invalid = sorted(set(bg_data.get("starting_skills", {})) - valid_skills)
+        if invalid:
+            raise ValidationError(
+                f"Invalid starting skill(s) for background '{bg_name}'",
+                details={
+                    "background": bg_name,
+                    "invalid_skills": invalid,
+                    "valid_skills": sorted(valid_skills),
+                },
+            )
+
+
 async def seed_backgrounds(session: AsyncSession) -> list[Background]:
     """Seed all character backgrounds. Returns list of created/found backgrounds."""
+    validate_background_skills()
+
     backgrounds = []
 
     for bg_data in BACKGROUNDS_DATA:
@@ -1015,9 +1045,15 @@ async def seed_backgrounds(session: AsyncSession) -> list[Background]:
         if background is None:
             background = Background(**bg_data)
             session.add(background)
-            await session.flush()
-            await session.refresh(background)
+        else:
+            for field, value in bg_data.items():
+                if field == "name":
+                    continue
+                if getattr(background, field) != value:
+                    setattr(background, field, value)
 
+        await session.flush()
+        await session.refresh(background)
         backgrounds.append(background)
 
     return backgrounds
@@ -1048,6 +1084,8 @@ async def seed_world(session: AsyncSession) -> dict:
     Seed all static world data (kingdom, regions, locations, races, backgrounds, enemies).
     Idempotent: running multiple times will not create duplicates.
     Returns a summary of what was seeded.
+
+    Flushes only; the caller owns the transaction boundary.
     """
     kingdom = await seed_kingdom(session)
     regions = await seed_regions(session, kingdom)
@@ -1056,7 +1094,7 @@ async def seed_world(session: AsyncSession) -> dict:
     backgrounds = await seed_backgrounds(session)
     enemies = await seed_enemies(session)
 
-    await session.commit()
+    await session.flush()
 
     return {
         "kingdom": kingdom.name,

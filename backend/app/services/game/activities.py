@@ -634,7 +634,7 @@ async def perform_explore(
     if len(gameplay_state.recent_activities) > 20:
         gameplay_state.recent_activities = gameplay_state.recent_activities[-20:]
 
-    await session.commit()
+    await session.flush()
 
     # Apply condition effects after activity
     condition_effects = await apply_condition_effects(session, character)
@@ -768,7 +768,7 @@ async def perform_rest(
     # Apply condition effects after activity
     condition_effects = await apply_condition_effects(session, character)
 
-    await session.commit()
+    await session.flush()
 
     return {
         "result": {
@@ -924,7 +924,7 @@ async def perform_work(
     # Apply condition effects after activity
     condition_effects = await apply_condition_effects(session, character)
 
-    await session.commit()
+    await session.flush()
 
     return {
         "result": {

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.rng import SeededRNG, get_rng
 from app.models.enums import (
     RaceName,
     BackgroundName,
@@ -56,11 +57,33 @@ def generate_rng_seed() -> int:
     return secrets.randbits(32)
 
 
-def select_random_personality_trait() -> tuple[str, str]:
-    """Select a random personality trait and description."""
-    import random
+def select_random_personality_trait(rng: SeededRNG) -> tuple[str, str]:
+    """Select a random personality trait and description using the session RNG."""
+    return rng.choice(PERSONALITY_TRAITS)
 
-    return random.choice(PERSONALITY_TRAITS)
+
+def resolve_skill_name(
+    skill_name_str: str, background_name: BackgroundName
+) -> SkillName:
+    """Resolve a seed skill name or raise a descriptive ValidationError."""
+    try:
+        return SkillName(skill_name_str)
+    except ValueError as exc:
+        raise ValidationError(
+            f"Invalid starting skill '{skill_name_str}' for background "
+            f"'{background_name.value}'",
+            details={
+                "background": background_name.value,
+                "invalid_skill": skill_name_str,
+                "valid_skills": [skill.value for skill in SkillName],
+            },
+        ) from exc
+
+
+def validate_starting_skills(background: Background) -> None:
+    """Validate every starting skill defined for a background."""
+    for skill_name_str in background.starting_skills or {}:
+        resolve_skill_name(skill_name_str, background.name)
 
 
 async def validate_race(session: AsyncSession, race_name: RaceName) -> Race:
@@ -190,19 +213,15 @@ async def create_character_skills(
     char_skills = []
     starting_skills = background.starting_skills or {}
     for skill_name_str, level in starting_skills.items():
-        try:
-            skill_name = SkillName(skill_name_str)
-            char_skill = CharacterSkill(
-                character_id=character.id,
-                name=skill_name,
-                level=level,
-                experience=0,
-            )
-            session.add(char_skill)
-            char_skills.append(char_skill)
-        except ValueError:
-            # Skip invalid skill names
-            continue
+        skill_name = resolve_skill_name(skill_name_str, background.name)
+        char_skill = CharacterSkill(
+            character_id=character.id,
+            name=skill_name,
+            level=level,
+            experience=0,
+        )
+        session.add(char_skill)
+        char_skills.append(char_skill)
     await session.flush()
     return char_skills
 
@@ -253,6 +272,7 @@ async def create_character(
     # Validate inputs
     race = await validate_race(session, race_name)
     background = await validate_background(session, background_name)
+    validate_starting_skills(background)
 
     # Get or create session
     game_session = await get_or_create_session(session, session_token)
@@ -269,8 +289,10 @@ async def create_character(
         if default_location:
             starting_location_id = default_location.id
 
-    # Generate personality
-    personality_trait, personality_description = select_random_personality_trait()
+    # Generate personality using the session's deterministic RNG
+    personality_trait, personality_description = select_random_personality_trait(
+        get_rng(game_session.seed)
+    )
 
     # Calculate attributes
     attributes = await calculate_starting_attributes(race, background)
@@ -329,7 +351,7 @@ async def create_character(
     # Update session
     game_session.total_generations += 1
 
-    await session.commit()
+    await session.flush()
     await session.refresh(character)
 
     return character, game_session

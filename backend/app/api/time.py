@@ -117,8 +117,6 @@ async def advance_time_endpoint(
             periods=request.periods,
         )
 
-        await session.commit()
-
         return AdvanceTimeResponse(**advance_result)
 
     except NotFoundError as e:
