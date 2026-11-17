@@ -11,14 +11,9 @@ from app.core.exceptions import ResourceError, ValidationError
 from app.core.rng import get_rng
 from app.models.enums import DeathCause
 from app.models.gameplay import Character
-from app.services.character.inventory import (
-    treat_condition_with_item,
-    get_treatment_definition,
-    get_all_treatments,
-)
 
 
-def validate_health_bounds(character: Character) -> None:
+async def validate_health_bounds(character: Character) -> None:
     """Validate that character health is within valid bounds.
 
     Args:
@@ -151,6 +146,7 @@ CONDITIONS = {
     },
 }
 
+
 class ConditionError(ValidationError):
     """Condition-specific error."""
 
@@ -198,8 +194,25 @@ async def add_condition(
         character.conditions = {}
 
     # Determine severity and duration
-    cond_severity = severity or definition["base_severity"]
-    cond_duration = duration or definition["max_duration"]
+    if severity is not None:
+        if severity < 0 or severity > 3:
+            raise ConditionError(
+                "Severity must be between 0 and 3",
+                details={"severity": severity},
+            )
+        cond_severity = severity
+    else:
+        cond_severity = definition["base_severity"]
+
+    if duration is not None:
+        if duration < 0:
+            raise ConditionError(
+                "Duration cannot be negative",
+                details={"duration": duration},
+            )
+        cond_duration = duration
+    else:
+        cond_duration = definition["max_duration"]
 
     # Check if condition already exists
     if condition_id in character.conditions:
@@ -455,7 +468,7 @@ async def generate_injury_from_damage(
     Returns:
         List of condition IDs added
     """
-    rng = get_rng(rng_seed or character.session_id)
+    rng = get_rng(rng_seed if rng_seed is not None else character.session_id)
 
     # Threshold for injury chance
     if damage_amount < 10:
@@ -502,7 +515,7 @@ async def generate_illness_from_exposure(
     Returns:
         List of condition IDs added
     """
-    rng = get_rng(rng_seed or character.session_id)
+    rng = get_rng(rng_seed if rng_seed is not None else character.session_id)
 
     exposure_illnesses = {
         "cold": ["frostbite", "minor_illness", "serious_illness"],
@@ -522,15 +535,3 @@ async def generate_illness_from_exposure(
         return [illness]
 
     return []
-
-
-if __name__ == "__main__":
-    # Quick test
-    import asyncio
-
-    async def test():
-        print("Conditions module loaded successfully")
-        print(f"Available conditions: {list(CONDITIONS.keys())}")
-        print(f"Available treatments: {list(TREATMENTS.keys())}")
-
-    asyncio.run(test())

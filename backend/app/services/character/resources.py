@@ -11,41 +11,8 @@ from app.models.gameplay import Character
 from app.services.character.conditions import (
     calculate_total_penalties,
     get_effective_stamina,
+    validate_health_bounds,
 )
-
-
-async def validate_health_bounds(character: Character) -> None:
-    """Validate that character health is within valid bounds.
-
-    Args:
-        character: Character to validate
-
-    Raises:
-        ResourceError: If health is out of bounds
-    """
-    if character.current_health < 0:
-        raise ResourceError(
-            "Health cannot be negative",
-            details={
-                "current_health": character.current_health,
-                "max_health": character.max_health,
-            },
-        )
-
-    if character.current_health > character.max_health:
-        raise ResourceError(
-            "Health cannot exceed maximum",
-            details={
-                "current_health": character.current_health,
-                "max_health": character.max_health,
-            },
-        )
-
-    if character.max_health <= 0:
-        raise ResourceError(
-            "Maximum health must be positive",
-            details={"max_health": character.max_health},
-        )
 
 
 async def validate_stamina_bounds(character: Character) -> None:
@@ -414,32 +381,38 @@ async def get_resource_status(character: Character) -> dict:
     effective_max_stamina = await get_effective_stamina(character)
     penalties = await calculate_total_penalties(character)
 
+    health_pct = (
+        (character.current_health / character.max_health * 100)
+        if character.max_health > 0
+        else 0.0
+    )
+    health_pct = min(100.0, max(0.0, health_pct))
+
+    stamina_pct = (
+        (character.current_stamina / effective_max_stamina * 100)
+        if effective_max_stamina > 0
+        else 0.0
+    )
+    stamina_pct = min(100.0, max(0.0, stamina_pct))
+
+    fatigue_pct = min(100.0, max(0.0, character.fatigue_level / 10 * 100))
+
     return {
         "health": {
             "current": character.current_health,
             "max": character.max_health,
-            "percent": round(
-                (character.current_health / character.max_health * 100)
-                if character.max_health > 0
-                else 0,
-                1,
-            ),
+            "percent": round(health_pct, 1),
         },
         "stamina": {
             "current": character.current_stamina,
             "max": character.max_stamina,
             "effective_max": effective_max_stamina,
-            "percent": round(
-                (character.current_stamina / effective_max_stamina * 100)
-                if effective_max_stamina > 0
-                else 0,
-                1,
-            ),
+            "percent": round(stamina_pct, 1),
         },
         "fatigue": {
             "level": character.fatigue_level,
             "max": 10,
-            "percent": round(character.fatigue_level / 10 * 100, 1),
+            "percent": round(fatigue_pct, 1),
         },
         "is_alive": character.is_alive,
         "money": character.money,

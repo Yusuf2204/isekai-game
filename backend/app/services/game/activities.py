@@ -30,10 +30,7 @@ from app.services.character.resources import (
 from app.services.character.conditions import apply_condition_effects
 from app.services.character.inventory import (
     add_money,
-    spend_money,
     add_item,
-    remove_item,
-    get_item_count,
 )
 
 
@@ -96,14 +93,16 @@ async def _validate_stamina_for_activity(
     if required_stamina <= 0:
         return  # No stamina requirement (e.g., rest)
 
-    effective_stamina = await get_effective_stamina(character)
-    if character.current_stamina < required_stamina:
+    effective_max = await get_effective_stamina(character)
+    available_stamina = min(character.current_stamina, effective_max)
+    if available_stamina < required_stamina:
         raise ValidationError(
             f"Insufficient stamina for {activity_type.value}",
             details={
                 "required_stamina": required_stamina,
                 "current_stamina": character.current_stamina,
-                "effective_max_stamina": effective_stamina,
+                "effective_stamina": available_stamina,
+                "effective_max_stamina": effective_max,
             },
         )
 
@@ -472,7 +471,7 @@ async def perform_explore(
     # Validate stamina BEFORE any side effects
     await _validate_stamina_for_activity(character, ActivityType.EXPLORE)
 
-    rng = get_rng(rng_seed or gameplay_state.session_id)
+    rng = get_rng(rng_seed if rng_seed is not None else gameplay_state.session_id)
 
     # Determine location
     target_location_id = location_id or gameplay_state.current_location_id
@@ -674,7 +673,7 @@ async def perform_rest(
     rng_seed: int | None = None,
 ) -> dict:
     """Perform rest activity."""
-    rng = get_rng(rng_seed or gameplay_state.session_id)
+    rng = get_rng(rng_seed if rng_seed is not None else gameplay_state.session_id)
 
     # Determine time cost and health restore
     if duration == "short":
@@ -775,9 +774,7 @@ async def perform_rest(
             "success": True,
             "message": "Rest complete",
             "time_advanced": time_cost,
-            "health_change": total_heal
-            - health_loss
-            + condition_effects["health_change"],
+            "health_change": total_heal + condition_effects["health_change"],
             "money_change": 0,
             "experience_gained": {},
             "items_gained": [],
@@ -806,7 +803,7 @@ async def perform_work(
     # Validate stamina BEFORE any side effects
     await _validate_stamina_for_activity(character, ActivityType.WORK)
 
-    rng = get_rng(rng_seed or gameplay_state.session_id)
+    rng = get_rng(rng_seed if rng_seed is not None else gameplay_state.session_id)
 
     # Get current location
     if not gameplay_state.current_location_id:

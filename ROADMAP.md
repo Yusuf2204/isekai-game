@@ -43,10 +43,10 @@
 |------|--------|---------|
 | Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers. Missing global exception handler, startup seeding, migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, and 3 completed and verified. Stage 4 next. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, and 4 completed and verified. Stage 5 next. |
 | Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (277 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (286 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
 
 ---
 
@@ -287,22 +287,33 @@ statuses for different subtasks.
 
 ### STAGE 4 — Resource and Condition Mathematics
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
 - **Tasks:**
-  - Correct health change calculations (including interrupted rest).
-  - Make effective stamina consistent across validation and display.
-  - Clamp stamina percentage to valid bounds.
-  - Validate `severity` and `duration` correctly, including zero values.
-  - Consolidate duplicate health-bound validators.
-  - Verify condition effects remain in the request transaction after Stage 2;
-    do not reintroduce commits inside activity services.
-  - Clarify activity RNG seed fallback semantics (`rng_seed or session_id`) as
-    part of activity correctness (PR-10).
-  - Remove or repair related dead code and debug blocks.
+  - [x] Correct health change calculations (including interrupted rest) (CB-10).
+  - [x] Make effective stamina consistent across validation and display (CB-15).
+  - [x] Clamp stamina, health, and fatigue percentages to valid bounds (CB-14).
+  - [x] Validate `severity` and `duration` correctly, including zero values and negative checks (CB-13).
+  - [x] Consolidate duplicate health-bound validators into one shared implementation (CB-11).
+  - [x] Verify condition effects remain in the request transaction after Stage 2; do not reintroduce commits inside activity services (CB-16).
+  - [x] Clarify activity RNG seed fallback semantics (`rng_seed if rng_seed is not None else ...`) as part of activity correctness (PR-10).
+  - [x] Remove or repair related dead code and debug blocks (CB-12).
 - **Dependencies:** Stages 2, 3.
 - **Acceptance:** reported resource changes match persisted state; no double
   penalties; validators have a single implementation; condition effects persist
   in the same transaction as the activity that caused them.
+- **Verification record:**
+  - Added `backend/tests/test_stage4_resource_math.py` with 9 targeted regression
+    tests (9/9 passed).
+  - Tested interrupted rest health delta calculation, single shared
+    `validate_health_bounds` definition, severity/duration zero overrides and
+    negative rejection, stamina percentage clamp at 100%, effective stamina
+    validation in activities, and deterministic RNG seed fallback with seed 0.
+  - Affected condition/resource/activity test suites pass 124/124.
+  - Full test suite `pytest tests/ -q` passes **286 passed**, 264 warnings.
+  - Pre-existing Ruff errors reduced from 22 to 13.
+  - Development DB hash remains
+    `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Findings CB-10, CB-11, CB-12, CB-13, CB-14, CB-15, and PR-10 are closed.
 
 ### STAGE 5 — Inventory and Treatment Consolidation
 
@@ -415,7 +426,8 @@ statuses for different subtasks.
 - **Stage 3D — API alignment & error handling:** COMPLETED / VERIFIED.
 - **Stage 3E — Verification:** COMPLETED / VERIFIED.
 - **Stage 3F — Documentation:** COMPLETED / VERIFIED.
-- **Stage 4 — Resource and Condition Mathematics:** Next up (PLANNED).
+- **Stage 4 — Resource and Condition Mathematics:** COMPLETED / VERIFIED.
+- **Stage 5 — Inventory and Treatment Consolidation:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
 
 ---
@@ -446,8 +458,8 @@ statuses for different subtasks.
 |----|---------|-------------|--------|
 | CB-08 | Personality generation uses unseeded `random.choice`. | Stage 1 | CLOSED — seeded RNG implemented |
 | CB-09 | Seed data uses invalid skill `stealth`; it is silently dropped. | Stage 1 | CLOSED — Orphan corrected; validation added |
-| CB-10 | Interrupted rest subtracts health loss twice. | Stage 4 | OPEN |
-| CB-11 | Duplicate health-bound validators (sync and async). | Stage 4 | OPEN |
+| CB-10 | Interrupted rest subtracts health loss twice. | Stage 4 | CLOSED — Interrupted rest health change matches actual character health delta |
+| CB-11 | Duplicate health-bound validators (sync and async). | Stage 4 | CLOSED — Single shared validate_health_bounds implementation |
 | CB-17 | No global exception handler; error handling is duplicated per endpoint. | Stage 6 | OPEN |
 | CB-19 | Duplicate condition/treatment routes and divergent `TreatmentRequest` schemas. | Stage 5 | OPEN |
 | PR-01 | Services commit internally, breaking multi-table transaction boundaries. | Stage 2 | CLOSED — service/API commits removed; caller-owned transactions verified |
@@ -457,10 +469,10 @@ statuses for different subtasks.
 
 | ID | Finding | Remediation | Status |
 |----|---------|-------------|--------|
-| CB-12 | `conditions.py` `__main__` block references an unimported `TREATMENTS` symbol. | Stage 4 | OPEN |
-| CB-13 | `severity or base` / `duration or max` ignore valid zero values. | Stage 4 | OPEN |
-| CB-14 | Stamina percentage can exceed 100. | Stage 4 | OPEN |
-| CB-15 | Activity stamina validation ignores effective stamina. | Stage 4 | OPEN |
+| CB-12 | `conditions.py` `__main__` block references an unimported `TREATMENTS` symbol. | Stage 4 | CLOSED — Debug block and unimported TREATMENTS symbol removed |
+| CB-13 | `severity or base` / `duration or max` ignore valid zero values. | Stage 4 | CLOSED — Severity and duration handle zero overrides; negative values rejected |
+| CB-14 | Stamina percentage can exceed 100. | Stage 4 | CLOSED — Stamina, health, and fatigue percentages clamped to [0.0, 100.0] |
+| CB-15 | Activity stamina validation ignores effective stamina. | Stage 4 | CLOSED — Available stamina is checked against effective max stamina limit |
 | CB-16 | Condition effects are applied after commit. | Stage 4 | CLOSED — Stage 2 removed the service commit; effects now share the activity transaction. Stage 4 still verifies condition math. |
 | CB-18 | `current_period` is hardcoded in the time API. | Stage 3 | CLOSED — /api/time/periods returns real period when session_token provided, null otherwise; 404 on invalid session |
 | PR-03 | `__dirname` in `vite.config.ts` under ESM. | Stage 8 | OPEN |
@@ -483,7 +495,7 @@ statuses for different subtasks.
 | PR-02 | Empty `session_token` silently creates a new session. | Stage 10 | OPEN |
 | PR-05 | Caret dependency ranges allow drift. | Stage 9 | OPEN |
 | PR-09 | No frontend error boundary / API error hook. | Stage 8 | OPEN |
-| PR-10 | RNG seed fallback (`rng_seed or session_id`) semantics are ambiguous. | Stage 4 | DEFERRED — Stage 1 acceptance met without changing fallback semantics; clarify during activity RNG/resource correctness. |
+| PR-10 | RNG seed fallback (`rng_seed or session_id`) semantics are ambiguous. | Stage 4 | CLOSED — Explicit rng_seed if rng_seed is not None else ... fallback allows 0 as valid seed |
 | PR-11 | Legacy tests may share state / depend on ordering. | Stage 2 gate / ongoing | CLOSED — `test_activities_api.py`, `test_skill_progression.py`, `test_time_api.py`, and `test_character_progression.py` now pass standalone; full suite passes. |
 | — | `CharacterCreateRequest` has no session token path for generations. | Stage 10 | OPEN |
 | — | Missing tests for inventory/treatment/determinism/frontend. | Ongoing | OPEN |
@@ -516,19 +528,20 @@ has not been closed by a verified remediation stage.
 - **Test files available:** 12 test files from the last audit, plus the Stage 0B
   canary (`backend/tests/test_db_isolation_canary.py`), the Stage 1 test file
   (`backend/tests/test_stage1_rng_and_skills.py`), the Stage 2 transaction test
-  file (`backend/tests/test_transaction_ownership.py`), and the Stage 3
-  time-authority test file (`backend/tests/test_stage3_time_authority.py`) —
-  16 files total under `backend/tests/`.
+  file (`backend/tests/test_transaction_ownership.py`), the Stage 3
+  time-authority test file (`backend/tests/test_stage3_time_authority.py`), and
+  the Stage 4 resource-math test file
+  (`backend/tests/test_stage4_resource_math.py`) — 17 files total under
+  `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
-- **Ruff check:** 22 pre-existing errors remain outside Stages 1/2 scope. The
-  Stage 2 and Stage 3 test files pass `ruff check`; 7 of the pre-existing errors
-  are in `inventory.py`/`activities.py` and remain assigned to Stage 9 (TD-01).
-- **Ruff format check:** 5 pre-existing files would be reformatted, including
-  `inventory.py`; these remain assigned to Stage 9 (TD-02). The Stage 2 and
-  Stage 3 test files are already formatted.
-- **Full test suite:** `pytest tests/ -q` — **277 passed**, 256 warnings
-  (2026-11-17, after Stage 3 completion).
+- **Ruff check:** 13 pre-existing errors remain in `inventory.py`/`schemas/inventory.py`
+  (reduced from 22 after cleaning unused imports, duplicate symbols, and undefined
+  TREATMENTS in Stage 4). The Stage 2, 3, and 4 test and service files pass
+  `ruff check`.
+- **Ruff format check:** All Stage 4 touched files are formatted.
+- **Full test suite:** `pytest tests/ -q` — **286 passed**, 264 warnings
+  (2026-11-17, after Stage 4 completion).
 - **Stage 2A isolation verification:** `test_time_api.py` — 7 passed standalone;
   `test_character_progression.py` — 14 passed standalone; both together — 21
   passed. TD-03 and PR-11 are closed.
@@ -540,7 +553,7 @@ has not been closed by a verified remediation stage.
   `5c746a7a0611b3af21bae1398a68546b2dcb0868b381bc7d42bef06881903824`;
   backup is stored at
   `/tmp/opencode/isekai-db-backups/isekai.db.bak.20261111T083905207573128Z`.
-  Hash remained unchanged during Stage 2A, Stage 2, Stage 3B/3C, and Stage 3
+  Hash remained unchanged during Stage 2A, Stage 2, Stage 3, and Stage 4
   final completion verification.
 - **Test database artifact:** `backend/test_isekai.db` was created by the canary
   run and is gitignored; the session fixture removes stale test DB files on the
@@ -595,3 +608,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-11 | Stage 3A completed: added `test_stage3_time_authority.py`; 6 expected failures and 2 passing baselines confirm the duplicate engine and missing condition ticks. No implementation changes. |
 | 2026-11-11 | Stage 3B/3C completed: removed duplicate `advance_time`, routed travel/activities through `game.time.advance_time`, removed world export, and closed CB-07. Targeted tests 90 passed; full suite 275 passed; dev DB hash unchanged. |
 | 2026-11-17 | Stage 3 completed: aligned API responses (PR-12 `days_advanced` & `expired_conditions`, CB-18 optional `session_token` with `null` default and 404 error mapping), added test coverage in `test_time_api.py` (9/9 passed), verified full suite (277 passed), and preserved dev DB hash. Closed CB-18 and PR-12. |
+| 2026-11-17 | Stage 4 completed: fixed interrupted rest health change delta (CB-10), consolidated single async `validate_health_bounds` (CB-11), removed debug block with undefined `TREATMENTS` (CB-12), handled 0-overrides and negative validation for condition severity/duration (CB-13), clamped resource percentages to [0.0, 100.0] (CB-14), checked available stamina against effective max stamina (CB-15), clarified deterministic RNG seed fallback allowing seed 0 (PR-10), and verified condition effects persist in caller transaction (CB-16). Targeted tests 9/9 passed, full suite 286 passed, dev DB hash unchanged. |

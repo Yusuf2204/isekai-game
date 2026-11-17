@@ -319,6 +319,7 @@ class TestConditionTreatment:
             character.conditions["minor_cut"]["duration"] = 1
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             await session.commit()
 
@@ -340,6 +341,7 @@ class TestConditionTreatment:
             await add_condition(session, character, "deep_wound")  # severity 2
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             await session.commit()
 
@@ -581,6 +583,7 @@ class TestConditionAPI:
             character.conditions["minor_cut"]["duration"] = 1
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             from sqlalchemy.orm.attributes import flag_modified
 
@@ -740,9 +743,12 @@ class TestTreatmentAtomicity:
         async with get_session() as session:
             character = await _get_character_in_session(session, character.id)
             # Add condition with severity 2
-            await add_condition(session, character, "deep_wound")  # severity 2, duration 7
+            await add_condition(
+                session, character, "deep_wound"
+            )  # severity 2, duration 7
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             await session.commit()
 
@@ -752,6 +758,7 @@ class TestTreatmentAtomicity:
 
             # Treat condition
             from app.services.character.inventory import treat_condition_with_item
+
             result = await treat_condition_with_item(
                 session, character, "deep_wound", "bandage"
             )
@@ -769,7 +776,9 @@ class TestTreatmentAtomicity:
             assert final_bandage_count == initial_bandage_count - 1
 
             # Verify condition was modified
-            assert character.conditions["deep_wound"]["severity"] == 1
+            assert (
+                character.conditions["deep_wound"]["severity"] == initial_severity - 1
+            )
 
     @pytest.mark.asyncio
     async def test_treat_condition_atomicity_item_not_in_inventory(self):
@@ -780,7 +789,9 @@ class TestTreatmentAtomicity:
         async with get_session() as session:
             character = await _get_character_in_session(session, character.id)
             # Add condition but NO bandage in inventory
-            await add_condition(session, character, "minor_cut")  # severity 1, duration 3
+            await add_condition(
+                session, character, "minor_cut"
+            )  # severity 1, duration 3
             await session.commit()
 
             # Get initial state
@@ -818,6 +829,7 @@ class TestTreatmentAtomicity:
             await add_condition(session, character, "poison")
             # Add bandage to inventory (but bandage can't treat poison)
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             await session.commit()
 
@@ -830,9 +842,7 @@ class TestTreatmentAtomicity:
             from app.core.exceptions import ValidationError
 
             with pytest.raises(ValidationError) as exc_info:
-                await treat_condition_with_item(
-                    session, character, "poison", "bandage"
-                )
+                await treat_condition_with_item(session, character, "poison", "bandage")
 
             # Verify atomic failure: item NOT consumed, condition unchanged
             assert "cannot treat" in str(exc_info.value).lower()
@@ -852,6 +862,7 @@ class TestTreatmentAtomicity:
             character = await _get_character_in_session(session, character.id)
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             await session.commit()
 
@@ -882,13 +893,17 @@ class TestTreatmentAtomicity:
         async with get_session() as session:
             character = await _get_character_in_session(session, character.id)
             # Add condition with severity 1 and low duration
-            await add_condition(session, character, "minor_cut")  # severity 1, duration 3
+            await add_condition(
+                session, character, "minor_cut"
+            )  # severity 1, duration 3
             # Set duration low so it gets fully removed
             character.conditions["minor_cut"]["duration"] = 1
             # Add bandage to inventory
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 1, 10, "consumable")
             from sqlalchemy.orm.attributes import flag_modified
+
             flag_modified(character, "conditions")
             await session.commit()
 
@@ -897,6 +912,7 @@ class TestTreatmentAtomicity:
 
             # Treat condition - should fully remove it
             from app.services.character.inventory import treat_condition_with_item
+
             result = await treat_condition_with_item(
                 session, character, "minor_cut", "bandage"
             )
@@ -926,6 +942,7 @@ class TestTreatmentAtomicity:
             await add_condition(session, character, "deep_wound")  # severity 2
             # Add multiple bandages
             from app.services.character.inventory import add_item
+
             await add_item(session, character, "Bandage", 3, 10, "consumable")
             await session.commit()
 
@@ -935,6 +952,7 @@ class TestTreatmentAtomicity:
 
             # Treat condition - should consume only 1
             from app.services.character.inventory import treat_condition_with_item
+
             result = await treat_condition_with_item(
                 session, character, "deep_wound", "bandage"
             )
