@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.enums import TimeOfDay
 from app.models.gameplay import Character, GameplayState, NPC
 from app.models.world import Kingdom, Location, Region
+from app.services.game.time import advance_time
 
 
 async def get_kingdom(session: AsyncSession) -> Kingdom:
@@ -163,35 +163,6 @@ DEFAULT_TRAVEL_COST = 2
 def get_travel_time_cost(from_type: str, to_type: str) -> int:
     """Get travel time cost between location types."""
     return TRAVEL_TIME_COSTS.get((from_type, to_type), DEFAULT_TRAVEL_COST)
-
-
-async def advance_time(
-    session: AsyncSession,
-    gameplay_state: GameplayState,
-    periods: int,
-) -> GameplayState:
-    """
-    Advance in-game time by the specified number of periods.
-
-    Time periods: MORNING -> AFTERNOON -> EVENING -> NIGHT -> MORNING (next day)
-    """
-    time_order = [
-        TimeOfDay.MORNING,
-        TimeOfDay.AFTERNOON,
-        TimeOfDay.EVENING,
-        TimeOfDay.NIGHT,
-    ]
-    current_idx = time_order.index(gameplay_state.current_time_of_day)
-
-    new_idx = (current_idx + periods) % 4
-    days_advanced = (current_idx + periods) // 4
-
-    gameplay_state.current_time_of_day = time_order[new_idx]
-    gameplay_state.current_day += days_advanced
-
-    await session.flush()
-    await session.refresh(gameplay_state)
-    return gameplay_state
 
 
 async def travel_to_location(

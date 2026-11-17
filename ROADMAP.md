@@ -43,10 +43,10 @@
 |------|--------|---------|
 | Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers. Missing global exception handler, startup seeding, migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, and 2 completed and verified. Stage 3 is next. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, and 3 completed and verified. Stage 4 next. |
 | Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (267 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (277 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
 
 ---
 
@@ -76,7 +76,7 @@ statuses for different subtasks.
 > The phases below are recorded as implemented from project history. Unless a
 > phase explicitly says `TESTED`/`VERIFIED`, its behavior has **not** been
 > independently verified during this roadmap update. The full backend suite was
-> run during Stage 1; see §G.
+> run during Stage 1 and again after Stage 3B/3C; see §G.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -85,7 +85,7 @@ statuses for different subtasks.
 | **PART 2 — Database and world foundation** | SQLAlchemy models for sessions, characters, attributes, skills, inventory, NPC relationships, life records, legacy, gameplay state, kingdom/regions/locations/races/backgrounds/enemies. Seed data for Eldoria, 3 regions, 7 locations, 6 races, 5 backgrounds, enemies. | IMPLEMENTED / PARTIAL (startup seeding not wired; Orphan seed skill corrected in Stage 1) / NOT VERIFIED |
 | **PART 3A — Character creation foundation** | Character creation service, schemas, endpoint, random identity generation, racial modifiers, backgrounds, personality, starting skills/location, session token. | IMPLEMENTED / PARTIAL (Stage 1 deterministic RNG and seed validation verified; broader phase not fully verified) |
 | **PART 3B — Character initialization** | Initial money, health/resources, inventory, starting skills, game session and gameplay state initialization. | IMPLEMENTED / NOT VERIFIED |
-| **PART 3C — World, time, and basic activities** | Location/world API, time API and periods, activities (explore, work, rest, train, socialize, trade), travel, activity log. | IMPLEMENTED / PARTIAL (duplicate `advance_time`; condition ticking inconsistency) / NOT VERIFIED |
+| **PART 3C — World, time, and basic activities** | Location/world API, time API and periods, activities (explore, work, rest, train, socialize, trade), travel, activity log. | IMPLEMENTED / PARTIAL (time API alignment pending) / NOT VERIFIED |
 | **PART 3D — Character progression** | Attribute points, attribute experience, skill experience/levels, unified progression status. | IMPLEMENTED / NOT VERIFIED |
 | **PART 3E.1 — Health and resources** | Health/stamina/fatigue status, health changes, stamina/fatigue penalties and resource endpoints. | IMPLEMENTED / PARTIAL (duplicate health validator; stamina percentage bounds) / NOT VERIFIED |
 | **PART 3E.2 — Stamina, fatigue, and conditions** | Condition model (severity, duration), condition effects, fatigue, stamina penalties, treatment scaffolding. | IMPLEMENTED / PARTIAL (zero-value handling, effective stamina, debug block bug) / NOT VERIFIED |
@@ -233,18 +233,57 @@ statuses for different subtasks.
 
 ### STAGE 3 — Authoritative Time System
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
+- **Approved decisions:**
+  - `app/services/game/time.py` is the only authoritative time engine.
+  - CB-18: `/api/time/periods` accepts optional `session_token`; when supplied,
+    it returns the real `current_period`; when absent, `current_period` is
+    `null`.
+  - PR-12: `AdvanceTimeResponse` gains `days_advanced` and
+    `expired_conditions`.
+  - Keep the engine's `time_advance` log; travel/activity callers may add a
+    second log entry. Revisit only if too noisy.
 - **Tasks:**
-  - Make `app/services/game/time.py` the only authoritative time engine.
-  - Delete the duplicate `advance_time` in `world/locations.py` or replace it
-    with a direct delegate.
-  - Make activities, travel, and time API use the same time source.
-  - Prevent double condition ticking and tick exactly once per elapsed day.
-  - Align time response schemas with actual returned fields.
+  - [x] **3A — Regression tests:** Add failing tests for condition ticking
+    across time API, activities, and travel; assert a single `advance_time`
+    implementation and no `world_advance_time` caller.
+  - [x] **3B — Consolidate engine:** Deleted the duplicate `advance_time` from
+    `world/locations.py`; travel delegates to `game.time.advance_time`; removed
+    the duplicate export from `world/__init__.py`.
+  - [x] **3C — Activities:** Explore/rest/work use the authoritative engine;
+    removed the `world_advance_time` import. This was completed with 3B because
+    removing the world export would otherwise create a circular import.
+  - [x] **3D — API alignment:** Added PR-12 response fields (`days_advanced`,
+    `expired_conditions`) to `AdvanceTimeResponse`; implemented CB-18 optional
+    session-token period reporting (returns `current_period` when provided, `null`
+    when absent; handles missing session with 404).
+  - [x] **3E — Verification:** Run targeted time/activity/world tests (17 passed),
+    then the full suite (277 passed); confirm the development DB hash is unchanged.
+  - [x] **3F — Documentation:** Record verification, close CB-18 and PR-12, and
+    update this roadmap.
+- **Out of scope:** calendar/week/month/year tracking, real-time clocks,
+  event/NPC scheduling, activity or travel cost changes, Stage 4 condition/resource
+  math, Stage 5 inventory/treatment routes, Stage 6 error handling, Stage 7
+  startup seeding, frontend work, schema changes, migrations, new dependencies,
+  and Stage 9 lint cleanup.
 - **Dependencies:** Stage 2.
 - **Acceptance:** one time-advancement path; conditions tick exactly once per
   elapsed day across all paths; travel and activities produce identical time
   semantics for the same elapsed periods.
+- **3A verification:** `pytest tests/test_stage3_time_authority.py -v` produced
+  6 expected failures and 2 passing baseline tests. Failures prove the duplicate
+  engine, `world_advance_time` callers, and missing condition ticks on
+  explore/rest/work/travel. The time API baseline and same-day no-tick guard
+  pass.
+- **3B/3C verification:** `test_stage3_time_authority.py` now passes 8/8;
+  targeted time/activity/world/condition tests pass 90/90.
+- **3D/3E/3F verification:** Added test coverage for `GET /api/time/periods` with
+  session token (valid, after advancement, and invalid token 404) and PR-12
+  response fields in `test_time_api.py` (9/9 passed). Stage 3 test files pass
+  17/17 (`test_stage3_time_authority.py` 8, `test_time_api.py` 9). Full suite passes
+  277/277 with 256 warnings. Development DB hash remains
+  `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  CB-07, CB-18, and PR-12 are closed.
 
 ### STAGE 4 — Resource and Condition Mathematics
 
@@ -369,8 +408,15 @@ statuses for different subtasks.
 - **Plan audit and architecture anchor:** COMPLETED / APPROVED (2026-11-11).
 - **Stage 2 — Transaction Ownership:** COMPLETED / VERIFIED.
 - **Stage 2A — Test isolation gate:** COMPLETED / VERIFIED.
+- **Stage 3 — Authoritative Time System:** COMPLETED / VERIFIED.
+- **Stage 3A — Time-authority regression tests:** COMPLETED / VERIFIED.
+- **Stage 3B — Consolidate time engine:** COMPLETED / VERIFIED.
+- **Stage 3C — Activities use authoritative time:** COMPLETED / VERIFIED.
+- **Stage 3D — API alignment & error handling:** COMPLETED / VERIFIED.
+- **Stage 3E — Verification:** COMPLETED / VERIFIED.
+- **Stage 3F — Documentation:** COMPLETED / VERIFIED.
+- **Stage 4 — Resource and Condition Mathematics:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
-- Stage 3 requires explicit approval before implementation.
 
 ---
 
@@ -392,7 +438,7 @@ statuses for different subtasks.
 | CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 | OPEN |
 | CB-05 | `use_item` validates `item_id` but consumes `item_name`. | Stage 5 | OPEN |
 | CB-06 | Tests previously called `recreate_db()` against the development database. | Stage 0B | CLOSED — full suite passed with development DB hash unchanged during tests |
-| CB-07 | Two `advance_time` implementations; conditions do not tick when activities cross midnight. | Stage 3 | OPEN |
+| CB-07 | Two `advance_time` implementations; conditions do not tick when activities cross midnight. | Stage 3 | CLOSED — duplicate removed; all paths use the authoritative engine and tick conditions once per elapsed day |
 
 ### High
 
@@ -416,12 +462,12 @@ statuses for different subtasks.
 | CB-14 | Stamina percentage can exceed 100. | Stage 4 | OPEN |
 | CB-15 | Activity stamina validation ignores effective stamina. | Stage 4 | OPEN |
 | CB-16 | Condition effects are applied after commit. | Stage 4 | CLOSED — Stage 2 removed the service commit; effects now share the activity transaction. Stage 4 still verifies condition math. |
-| CB-18 | `current_period` is hardcoded in the time API. | Stage 3 | OPEN |
+| CB-18 | `current_period` is hardcoded in the time API. | Stage 3 | CLOSED — /api/time/periods returns real period when session_token provided, null otherwise; 404 on invalid session |
 | PR-03 | `__dirname` in `vite.config.ts` under ESM. | Stage 8 | OPEN |
 | PR-04 | `npm test` points to Jest without config/setup. | Stage 8 | OPEN |
 | PR-07 | No Alembic migrations; schema relies on `create_all`. | Stage 9 | OPEN |
 | PR-08 | No `structlog`/structured logging configuration despite `AGENTS.md` §11. | Stage 9 | OPEN |
-| PR-12 | `AdvanceTimeResponse` omits fields returned by the service. | Stage 3 | OPEN |
+| PR-12 | `AdvanceTimeResponse` omits fields returned by the service. | Stage 3 | CLOSED — AdvanceTimeResponse includes days_advanced and expired_conditions |
 | DI-03 | Frontend `.env` and `.env.example` disagree on API port. | Stage 8/9 | OPEN |
 | — | Dead code in activities services; missing `__all__` exports for condition/inventory routers. | Stages 4/5 | OPEN |
 
@@ -469,20 +515,20 @@ has not been closed by a verified remediation stage.
 
 - **Test files available:** 12 test files from the last audit, plus the Stage 0B
   canary (`backend/tests/test_db_isolation_canary.py`), the Stage 1 test file
-  (`backend/tests/test_stage1_rng_and_skills.py`), and the Stage 2 transaction
-  test file (`backend/tests/test_transaction_ownership.py`) — 15 files total
-  under `backend/tests/`.
+  (`backend/tests/test_stage1_rng_and_skills.py`), the Stage 2 transaction test
+  file (`backend/tests/test_transaction_ownership.py`), and the Stage 3
+  time-authority test file (`backend/tests/test_stage3_time_authority.py`) —
+  16 files total under `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
 - **Ruff check:** 22 pre-existing errors remain outside Stages 1/2 scope. The
-  Stage 2 test file passes `ruff check`; 7 of the pre-existing errors are in
-  Stage 2-touched `inventory.py`/`activities.py` and remain assigned to Stage 9
-  (TD-01).
+  Stage 2 and Stage 3 test files pass `ruff check`; 7 of the pre-existing errors
+  are in `inventory.py`/`activities.py` and remain assigned to Stage 9 (TD-01).
 - **Ruff format check:** 5 pre-existing files would be reformatted, including
-  `inventory.py`; these remain assigned to Stage 9 (TD-02). The Stage 2 test
-  file is already formatted.
-- **Full test suite:** `pytest tests/ -q` — **267 passed**, 248 warnings
-  (2026-11-11).
+  `inventory.py`; these remain assigned to Stage 9 (TD-02). The Stage 2 and
+  Stage 3 test files are already formatted.
+- **Full test suite:** `pytest tests/ -q` — **277 passed**, 256 warnings
+  (2026-11-17, after Stage 3 completion).
 - **Stage 2A isolation verification:** `test_time_api.py` — 7 passed standalone;
   `test_character_progression.py` — 14 passed standalone; both together — 21
   passed. TD-03 and PR-11 are closed.
@@ -494,7 +540,8 @@ has not been closed by a verified remediation stage.
   `5c746a7a0611b3af21bae1398a68546b2dcb0868b381bc7d42bef06881903824`;
   backup is stored at
   `/tmp/opencode/isekai-db-backups/isekai.db.bak.20261111T083905207573128Z`.
-  Hash remained unchanged during Stage 2A and Stage 2 verification.
+  Hash remained unchanged during Stage 2A, Stage 2, Stage 3B/3C, and Stage 3
+  final completion verification.
 - **Test database artifact:** `backend/test_isekai.db` was created by the canary
   run and is gitignored; the session fixture removes stale test DB files on the
   next run.
@@ -545,3 +592,6 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-11 | Stage 2A completed: added per-test DB fixtures to `test_time_api.py` and `test_character_progression.py`; both pass standalone and in the full suite. TD-03 and PR-11 closed. |
 | 2026-11-11 | Stage 2 completed: removed service/API commits, kept caller-owned transactions, added transaction regression tests, verified 267 passing tests and unchanged dev DB hash. PR-01 and CB-16 closed. |
 | 2026-11-11 | Stage 1 and Stage 2 confirmation rerun: dedicated tests 16 passed; full suite 267 passed; development DB hash unchanged. |
+| 2026-11-11 | Stage 3A completed: added `test_stage3_time_authority.py`; 6 expected failures and 2 passing baselines confirm the duplicate engine and missing condition ticks. No implementation changes. |
+| 2026-11-11 | Stage 3B/3C completed: removed duplicate `advance_time`, routed travel/activities through `game.time.advance_time`, removed world export, and closed CB-07. Targeted tests 90 passed; full suite 275 passed; dev DB hash unchanged. |
+| 2026-11-17 | Stage 3 completed: aligned API responses (PR-12 `days_advanced` & `expired_conditions`, CB-18 optional `session_token` with `null` default and 404 error mapping), added test coverage in `test_time_api.py` (9/9 passed), verified full suite (277 passed), and preserved dev DB hash. Closed CB-18 and PR-12. |

@@ -91,6 +91,8 @@ class TestTimeAdvance:
             assert data["new_day"] == 1
             assert data["new_time_of_day"] == "afternoon"
             assert data["periods_advanced"] == 1
+            assert data["days_advanced"] == 0
+            assert data["expired_conditions"] == []
             assert "message" in data
 
     @pytest.mark.asyncio
@@ -137,6 +139,8 @@ class TestTimeAdvance:
             assert data["new_day"] == 2
             assert data["new_time_of_day"] == "morning"
             assert data["periods_advanced"] == 4
+            assert data["days_advanced"] == 1
+            assert isinstance(data["expired_conditions"], list)
 
     @pytest.mark.asyncio
     async def test_advance_time_invalid_periods(self):
@@ -179,6 +183,7 @@ class TestTimePeriods:
 
             assert "periods" in data
             assert "current_period" in data
+            assert data["current_period"] is None
             assert len(data["periods"]) == 4
 
             # Check each period has required fields
@@ -193,6 +198,48 @@ class TestTimePeriods:
                 assert "npc_availability_modifier" in period
                 assert isinstance(period["available_activities"], list)
                 assert 0 <= period["npc_availability_modifier"] <= 1
+
+    @pytest.mark.asyncio
+    async def test_get_time_periods_with_session(self):
+        """Test getting time periods with a valid session token."""
+        character, game_session = await _create_character_with_session()
+        session_token = game_session.session_token
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/time/periods", params={"session_token": session_token}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["current_period"] == "morning"
+
+            # Advance time by 1 period and re-check
+            await client.post(
+                "/api/time/advance",
+                json={"periods": 1},
+                params={"session_token": session_token},
+            )
+            response_after = await client.get(
+                "/api/time/periods", params={"session_token": session_token}
+            )
+            assert response_after.status_code == 200
+            assert response_after.json()["current_period"] == "afternoon"
+
+    @pytest.mark.asyncio
+    async def test_get_time_periods_invalid_session(self):
+        """Test getting time periods with an invalid session token returns 404."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/time/periods", params={"session_token": "non_existent_token"}
+            )
+            assert response.status_code == 404
+            data = response.json()
+            assert "detail" in data
+            assert data["detail"]["error"] == "NOT_FOUND"
 
 
 class TestTimeIntegration:

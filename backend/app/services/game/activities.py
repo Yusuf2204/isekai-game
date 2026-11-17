@@ -18,7 +18,7 @@ from app.models.gameplay import (
     GameplayState,
 )
 from app.models.world import Location
-from app.services.world import advance_time as world_advance_time
+from app.services.game.time import advance_time
 from app.services.character.progression import grant_character_xp, grant_skill_xp
 from app.services.character.resources import (
     consume_stamina,
@@ -490,7 +490,7 @@ async def perform_explore(
 
     # Advance time
     time_cost = ACTIVITY_TIME_COSTS[ActivityType.EXPLORE]
-    await world_advance_time(session, gameplay_state, time_cost)
+    await advance_time(session, gameplay_state, time_cost)
 
     # Consume stamina and increase fatigue
     stamina_cost = ACTIVITY_STAMINA_COSTS[ActivityType.EXPLORE]
@@ -733,7 +733,7 @@ async def perform_rest(
     )
 
     # Advance time
-    await world_advance_time(session, gameplay_state, time_cost)
+    await advance_time(session, gameplay_state, time_cost)
 
     # Restore stamina and reduce fatigue
     activity_type = ActivityType.REST if duration == "long" else ActivityType.REST_SHORT
@@ -889,7 +889,7 @@ async def perform_work(
 
     # Advance time
     time_cost = ACTIVITY_TIME_COSTS[ActivityType.WORK]
-    await world_advance_time(session, gameplay_state, time_cost)
+    await advance_time(session, gameplay_state, time_cost)
 
     # Consume stamina and increase fatigue
     stamina_cost = ACTIVITY_STAMINA_COSTS[ActivityType.WORK]

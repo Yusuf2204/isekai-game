@@ -29,6 +29,8 @@ class AdvanceTimeResponse(BaseModel):
     new_time_of_day: str
     periods_advanced: int
     message: str
+    days_advanced: int = Field(default=0)
+    expired_conditions: list[str] = Field(default_factory=list)
 
 
 class TimePeriodInfo(BaseModel):
@@ -45,4 +47,4 @@ class TimePeriodsResponse(BaseModel):
     """Response schema for all time periods info."""
 
     periods: list[TimePeriodInfo]
-    current_period: str
+    current_period: str | None = None
