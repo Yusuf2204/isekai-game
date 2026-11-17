@@ -1,25 +1,25 @@
 """Character creation and progression API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db_session
-from app.core.exceptions import GameError, NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.models.gameplay import Character
 from app.schemas.character import (
-    CharacterCreateRequest,
-    CharacterCreateResponse,
-    CharacterResponse,
-    CharacterAttributeResponse,
-    CharacterSkillResponse,
-    CharacterInventoryItemResponse,
     AttributeAllocateRequest,
     AttributeAllocateResponse,
     AttributePointsResponse,
-    UnifiedProgressionStatusResponse,
+    CharacterAttributeResponse,
+    CharacterCreateRequest,
+    CharacterCreateResponse,
+    CharacterInventoryItemResponse,
+    CharacterResponse,
+    CharacterSkillResponse,
     ResourceStatusResponse,
+    UnifiedProgressionStatusResponse,
 )
 from app.services.character.creation import create_character, get_or_create_session
 from app.services.character.progression import (
@@ -41,58 +41,40 @@ async def create_character_endpoint(
     request: CharacterCreateRequest,
     session: AsyncSession = Depends(get_db_session),
 ) -> CharacterCreateResponse:
-    """
-    Create a new character.
+    """Create a new character.
 
     The character will be associated with a new or existing game session.
     All starting attributes, skills, and inventory are calculated from the
     selected race and background.
     """
-    try:
-        character, game_session = await create_character(
-            session=session,
-            name=request.name,
-            race_name=request.race_name,
-            background_name=request.background_name,
-            gender_presentation=request.gender_presentation,
-            starting_location_id=request.starting_location_id,
-        )
+    character, game_session = await create_character(
+        session=session,
+        name=request.name,
+        race_name=request.race_name,
+        background_name=request.background_name,
+        gender_presentation=request.gender_presentation,
+        starting_location_id=request.starting_location_id,
+    )
 
-        # Reload character with all relationships
-        result = await session.execute(
-            select(Character)
-            .options(
-                selectinload(Character.attributes),
-                selectinload(Character.skills),
-                selectinload(Character.inventory),
-            )
-            .where(Character.id == character.id)
+    # Reload character with all relationships
+    result = await session.execute(
+        select(Character)
+        .options(
+            selectinload(Character.attributes),
+            selectinload(Character.skills),
+            selectinload(Character.inventory),
         )
-        character = result.scalar_one()
+        .where(Character.id == character.id)
+    )
+    character = result.scalar_one()
 
-        character_response = _build_character_response(character)
+    character_response = _build_character_response(character)
 
-        return CharacterCreateResponse(
-            character=character_response,
-            session_token=game_session.session_token,
-            message="Character created successfully",
-        )
-
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except GameError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
+    return CharacterCreateResponse(
+        character=character_response,
+        session_token=game_session.session_token,
+        message="Character created successfully",
+    )
 
 
 def _build_character_response(character: Character) -> CharacterResponse:
@@ -186,28 +168,10 @@ async def get_attribute_points_endpoint(
     session_token: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> AttributePointsResponse:
-    """
-    Get the current character's unspent attribute points.
-    """
-    try:
-        character = await _get_character_from_session(session, session_token)
-        result = await get_attribute_points(character)
-        return AttributePointsResponse(**result)
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except GameError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
+    """Get the current character's unspent attribute points."""
+    character = await _get_character_from_session(session, session_token)
+    result = await get_attribute_points(character)
+    return AttributePointsResponse(**result)
 
 
 @router.post("/allocate-attribute", response_model=AttributeAllocateResponse)
@@ -216,39 +180,21 @@ async def allocate_attribute_endpoint(
     session_token: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> AttributeAllocateResponse:
-    """
-    Allocate attribute points to increase a character attribute.
+    """Allocate attribute points to increase a character attribute.
 
     Each allocation consumes 1 Attribute Point (or more if specified).
     Attribute Points are earned through character level-ups (1 per level).
     """
-    try:
-        character = await _get_character_from_session(session, session_token)
+    character = await _get_character_from_session(session, session_token)
 
-        result = await allocate_attribute_points(
-            session=session,
-            character=character,
-            attribute_name=request.attribute_name,
-            points=request.points,
-        )
+    result = await allocate_attribute_points(
+        session=session,
+        character=character,
+        attribute_name=request.attribute_name,
+        points=request.points,
+    )
 
-        return AttributeAllocateResponse(**result)
-
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except GameError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
+    return AttributeAllocateResponse(**result)
 
 
 @router.get("/progression", response_model=UnifiedProgressionStatusResponse)
@@ -256,36 +202,18 @@ async def get_progression_status_endpoint(
     session_token: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> UnifiedProgressionStatusResponse:
-    """
-    Get the complete unified progression status for the current character.
+    """Get the complete unified progression status for the current character.
 
     Returns character level/XP, all skills with progression, and all attributes with values.
     """
-    try:
-        character = await _get_character_from_session(session, session_token)
+    character = await _get_character_from_session(session, session_token)
 
-        # Load skills and attributes if not already loaded
-        await session.refresh(character, ["attributes", "skills"])
+    # Load skills and attributes if not already loaded
+    await session.refresh(character, ["attributes", "skills"])
 
-        result = await get_unified_progression_status(session, character)
+    result = await get_unified_progression_status(session, character)
 
-        return UnifiedProgressionStatusResponse(**result)
-
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except GameError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
+    return UnifiedProgressionStatusResponse(**result)
 
 
 @router.get("/resources", response_model=ResourceStatusResponse)
@@ -293,30 +221,12 @@ async def get_resource_status_endpoint(
     session_token: str,
     session: AsyncSession = Depends(get_db_session),
 ) -> ResourceStatusResponse:
-    """
-    Get the current character's resource status.
+    """Get the current character's resource status.
 
     Returns health (current, max, percent), alive status, and money.
     """
-    try:
-        character = await _get_character_from_session(session, session_token)
+    character = await _get_character_from_session(session, session_token)
 
-        result = await get_resource_status(character)
+    result = await get_resource_status(character)
 
-        return ResourceStatusResponse(**result)
-
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
-    except GameError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": e.code, "message": e.message, "details": e.details},
-        )
+    return ResourceStatusResponse(**result)

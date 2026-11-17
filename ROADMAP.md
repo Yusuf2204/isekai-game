@@ -43,10 +43,10 @@
 |------|--------|---------|
 | Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers. Missing global exception handler, startup seeding, migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, and 5 completed and verified. Stage 6 next. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, 5, and 6 completed and verified. Stage 7 next. |
 | Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (297 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (308 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
 
 ---
 
@@ -340,17 +340,27 @@ statuses for different subtasks.
 
 ### STAGE 6 — Global Exception Handling
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
 - **Tasks:**
-  - Standardize the error response envelope.
-  - Register global handlers for `GameError` and unexpected exceptions in
-    `app/main.py`.
-  - Remove duplicated per-endpoint error handling where appropriate.
+  - [x] Standardize the error response envelope with top-level `error`, `message`, `details` and backward-compatible `detail` (AGENTS.md §11, CB-04, CB-17).
+  - [x] Register global handlers in `app/main.py` via `app.core.errors` for `GameError` (and domain subclasses: `NotFoundError` -> 404, `ValidationError`/`ResourceError`/`ConditionError` -> 400, `ConflictError`/`GameStateError` -> 409, base -> 500), `StarletteHTTPException`, `RequestValidationError` (422), and unexpected `Exception` (500).
+  - [x] Remove duplicated per-endpoint `try...except` boilerplate across all API routers (`character.py`, `world.py`, `time.py`, `activities.py`, `conditions.py`, `inventory.py`).
+  - [x] Verify database transaction rollback on unhandled domain errors in `get_session()` context manager.
+  - [x] Add targeted integration tests in `backend/tests/test_stage6_exception_handling.py` (11 passed).
 - **Dependencies:** Stage 0B; recommended after Stage 2 to avoid reworking the
   same endpoint code twice.
 - **Acceptance:** consistent error format and status codes across the API;
   request failures roll back the request transaction and return the standard
   envelope.
+- **Verification record:**
+  - Added `backend/tests/test_stage6_exception_handling.py` with 11 targeted tests (11/11 passed).
+  - Verified standard envelope format: top-level `error`, `message`, `details` matching `AGENTS.md` and frontend `ApiError` interface, along with `detail` dict compatibility for existing tests.
+  - Verified status code mapping: `NotFoundError` -> 404, `ValidationError` -> 400, `ConflictError` -> 409, `GameStateError` -> 409, generic `GameError` -> 500, `RequestValidationError` -> 422, unhandled `Exception` -> 500.
+  - Verified atomic transaction rollback on domain errors without local try/except.
+  - Full test suite `pytest tests/ -q` passes **308 passed**, 286 warnings in 165.24s.
+  - `ruff check` reports **0 errors** across entire codebase; `ruff format --check` confirms all 65 files cleanly formatted.
+  - Development DB hash remains `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Finding CB-17 is closed and backend error envelope for CB-04 is resolved.
 
 ### STAGE 7 — Application Startup and World Seeding
 
@@ -437,7 +447,8 @@ statuses for different subtasks.
 - **Stage 3F — Documentation:** COMPLETED / VERIFIED.
 - **Stage 4 — Resource and Condition Mathematics:** COMPLETED / VERIFIED.
 - **Stage 5 — Inventory and Treatment Consolidation:** COMPLETED / VERIFIED.
-- **Stage 6 — Global Exception Handling:** Next up (PLANNED).
+- **Stage 6 — Global Exception Handling:** COMPLETED / VERIFIED.
+- **Stage 7 — Application Startup and World Seeding:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
 
 ---
@@ -457,7 +468,7 @@ statuses for different subtasks.
 | CB-01 | Fresh install cannot play: world is not seeded at startup; character creation needs races/backgrounds/locations. | Stage 7 | OPEN |
 | CB-02 | Frontend uses undefined Tailwind-style classes not present in project CSS. | Stage 8 | OPEN |
 | CB-03 | API base URL/port inconsistent (backend 8000 vs frontend config/UI 8001/8000). | Stage 8 | OPEN |
-| CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 | OPEN |
+| CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 / Stage 6 | CLOSED (BACKEND) / OPEN (FRONTEND) — Backend returns top-level error/message/details envelope; frontend parsing alignment in Stage 8 |
 | CB-05 | `use_item` validates `item_id` but consumes `item_name`. | Stage 5 | CLOSED — use_item validates and consumes by authoritative item_id |
 | CB-06 | Tests previously called `recreate_db()` against the development database. | Stage 0B | CLOSED — full suite passed with development DB hash unchanged during tests |
 | CB-07 | Two `advance_time` implementations; conditions do not tick when activities cross midnight. | Stage 3 | CLOSED — duplicate removed; all paths use the authoritative engine and tick conditions once per elapsed day |
@@ -470,7 +481,7 @@ statuses for different subtasks.
 | CB-09 | Seed data uses invalid skill `stealth`; it is silently dropped. | Stage 1 | CLOSED — Orphan corrected; validation added |
 | CB-10 | Interrupted rest subtracts health loss twice. | Stage 4 | CLOSED — Interrupted rest health change matches actual character health delta |
 | CB-11 | Duplicate health-bound validators (sync and async). | Stage 4 | CLOSED — Single shared validate_health_bounds implementation |
-| CB-17 | No global exception handler; error handling is duplicated per endpoint. | Stage 6 | OPEN |
+| CB-17 | No global exception handler; error handling is duplicated per endpoint. | Stage 6 | CLOSED — Global handlers registered; standard error envelope implemented; endpoint boilerplate removed |
 | CB-19 | Duplicate condition/treatment routes and divergent `TreatmentRequest` schemas. | Stage 5 | CLOSED — canonical /api/conditions namespace and shared schemas; duplicate routes removed |
 | PR-01 | Services commit internally, breaking multi-table transaction boundaries. | Stage 2 | CLOSED — service/API commits removed; caller-owned transactions verified |
 | IF-01…IF-05 | Event system, NPC, combat, death/legacy/reincarnation, session summary are absent. | Stage 10 | OPEN |
@@ -620,3 +631,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-17 | Stage 3 completed: aligned API responses (PR-12 `days_advanced` & `expired_conditions`, CB-18 optional `session_token` with `null` default and 404 error mapping), added test coverage in `test_time_api.py` (9/9 passed), verified full suite (277 passed), and preserved dev DB hash. Closed CB-18 and PR-12. |
 | 2026-11-17 | Stage 4 completed: fixed interrupted rest health change delta (CB-10), consolidated single async `validate_health_bounds` (CB-11), removed debug block with undefined `TREATMENTS` (CB-12), handled 0-overrides and negative validation for condition severity/duration (CB-13), clamped resource percentages to [0.0, 100.0] (CB-14), checked available stamina against effective max stamina (CB-15), clarified deterministic RNG seed fallback allowing seed 0 (PR-10), and verified condition effects persist in caller transaction (CB-16). Targeted tests 9/9 passed, full suite 286 passed, dev DB hash unchanged. |
 | 2026-11-17 | Stage 5 completed: resolved item identity mismatch in use_item to consume strictly by item_id (CB-05), consolidated condition and treatment routes under canonical /api/conditions namespace, moved condition treatment query to GET /api/conditions/{id}/treatments, removed duplicate routes from /api/character, unified TreatmentRequest/Response schemas in schemas/conditions.py, fixed local variable shadowing bug in inventory service (F823), resolved all 13 remaining project Ruff errors (0 errors across codebase), added 11 integration tests in test_stage5_inventory_consolidation.py (11/11 passed), verified full test suite (297 passed), and preserved dev DB hash. Closed CB-05 and CB-19. |
+| 2026-11-17 | Stage 6 completed: implemented global exception handling architecture in app.core.errors and app/main.py, established consistent error envelope (error, message, details, and backward-compatible detail mapping), mapped GameError subclasses and HTTP errors to standard status codes (400, 404, 409, 422, 500), removed duplicated try/except error handling across all API routers, verified transaction rollback on domain errors, added 11 integration tests in test_stage6_exception_handling.py (11/11 passed), verified full test suite (308 passed), confirmed 0 Ruff errors, and preserved dev DB hash. Closed CB-17 and backend error envelope for CB-04. |

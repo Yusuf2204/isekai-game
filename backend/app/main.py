@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import init_db, close_db
+from app.core.errors import register_error_handlers
 from app.api.health import router as health_router
 from app.api.character import router as character_router
 from app.api.world import router as world_router
@@ -42,6 +43,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Global exception handlers
+    register_error_handlers(app)
 
     # Include routers
     app.include_router(health_router, prefix="/api")
