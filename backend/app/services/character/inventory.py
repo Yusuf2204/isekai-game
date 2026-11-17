@@ -6,16 +6,15 @@ with consistent validation, atomic operations, and persistence.
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ResourceError, ValidationError
-from app.models.enums import SkillName
 from app.models.gameplay import Character, InventoryItem
 
 
 # =============================================================================
 # Money Operations
 # =============================================================================
+
 
 async def validate_money_bounds(character: Character) -> None:
     """Validate that character money is within valid bounds.
@@ -149,6 +148,7 @@ async def can_afford(character: Character, amount: int) -> bool:
 # Inventory Operations
 # =============================================================================
 
+
 async def get_inventory(character: Character) -> list[dict]:
     """Get character's full inventory with details.
 
@@ -163,17 +163,19 @@ async def get_inventory(character: Character) -> list[dict]:
 
     inventory = []
     for item in character.inventory:
-        inventory.append({
-            "id": item.id,
-            "item_id": item.item_id,
-            "name": item.name,
-            "description": item.description,
-            "quantity": item.quantity,
-            "item_type": item.item_type,
-            "value": item.value,
-            "is_equipped": item.is_equipped,
-            "properties": item.properties,
-        })
+        inventory.append(
+            {
+                "id": item.id,
+                "item_id": item.item_id,
+                "name": item.name,
+                "description": item.description,
+                "quantity": item.quantity,
+                "item_type": item.item_type,
+                "value": item.value,
+                "is_equipped": item.is_equipped,
+                "properties": item.properties,
+            }
+        )
     return inventory
 
 
@@ -304,7 +306,9 @@ async def add_item(
         )
 
     # Check if item already exists (by item_id or name)
-    search_id = item_id or item_name.lower().replace(" ", "_").replace("'", "").replace(",", "")
+    search_id = item_id or item_name.lower().replace(" ", "_").replace("'", "").replace(
+        ",", ""
+    )
     existing = await get_inventory_item(session, character, search_id)
 
     if existing:
@@ -317,7 +321,7 @@ async def add_item(
         character_id=character.id,
         item_id=search_id,
         name=item_name,
-        description=description or f"Acquired during activity.",
+        description=description or "Acquired during activity.",
         quantity=quantity,
         item_type=item_type,
         value=value,
@@ -618,13 +622,6 @@ async def treat_condition_with_item(
         ResourceError: If treatment item not in inventory
         ValidationError: If condition not found or treatment invalid
     """
-    # Import here to avoid circular dependency
-    from app.services.character.conditions import (
-        CONDITIONS,
-        add_condition,
-        remove_condition,
-    )
-
     # Validate condition exists
     if not character.conditions or condition_id not in character.conditions:
         raise ValidationError(
@@ -678,6 +675,7 @@ async def treat_condition_with_item(
 
         # Mark conditions as modified for JSON column
         from sqlalchemy.orm.attributes import flag_modified
+
         flag_modified(character, "conditions")
         await session.flush()
     except Exception:
@@ -713,20 +711,23 @@ async def get_available_treatments_for_condition(
     available = []
     for treatment_id, treatment in TREATMENTS.items():
         if condition_id in treatment["treats"]:
-            has_item = await has_item(session, character, treatment["item_id"], 1)
-            available.append({
-                "treatment_id": treatment_id,
-                "name": treatment["name"],
-                "description": treatment["description"],
-                "severity_reduction": treatment["severity_reduction"],
-                "in_inventory": has_item,
-            })
+            in_inv = await has_item(session, character, treatment["item_id"], 1)
+            available.append(
+                {
+                    "treatment_id": treatment_id,
+                    "name": treatment["name"],
+                    "description": treatment["description"],
+                    "severity_reduction": treatment["severity_reduction"],
+                    "in_inventory": in_inv,
+                }
+            )
     return available
 
 
 # =============================================================================
 # Validation Helpers
 # =============================================================================
+
 
 async def validate_character_inventory(character: Character) -> None:
     """Validate all character inventory items are in valid state.

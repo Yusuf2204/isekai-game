@@ -43,10 +43,10 @@
 |------|--------|---------|
 | Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers. Missing global exception handler, startup seeding, migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, and 4 completed and verified. Stage 5 next. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, and 5 completed and verified. Stage 6 next. |
 | Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (286 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (297 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
 
 ---
 
@@ -317,17 +317,26 @@ statuses for different subtasks.
 
 ### STAGE 5 — Inventory and Treatment Consolidation
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
 - **Tasks:**
-  - Choose and document one canonical route namespace for condition/treatment
-    operations before coding; remove the duplicate route family.
-  - Make item identity consistent (id vs name) for validation and consumption.
-  - Consolidate `TreatmentRequest` schemas into one shared schema.
-  - Add relevant integration tests.
+  - [x] Choose and document one canonical route namespace for condition/treatment operations (`/api/conditions`); remove duplicate route family from `/api/character` (CB-19).
+  - [x] Make item identity consistent (`item_id` authoritative) for validation and consumption in `use_item_endpoint` (CB-05).
+  - [x] Consolidate `TreatmentRequest` and `TreatmentResponse` schemas into shared schemas in `app/schemas/conditions.py` (CB-19).
+  - [x] Fix local variable shadowing collision on `has_item` in `get_available_treatments_for_condition` (CB-19 / F823).
+  - [x] Add targeted integration tests in `backend/tests/test_stage5_inventory_consolidation.py` (11 passed).
+  - [x] Resolve all 13 project Ruff lint errors; achieve 0 Ruff lint errors across entire codebase.
 - **Dependencies:** Stages 2, 4.
-- **Acceptance:** one contract per inventory/treatment operation; no item
-  identity mismatch; duplicate routes and schemas are removed; integration tests
-  exist.
+- **Acceptance:** one contract per inventory/treatment operation; no item identity mismatch; duplicate routes and schemas are removed; integration tests exist.
+- **Verification record:**
+  - Added `backend/tests/test_stage5_inventory_consolidation.py` with 11 integration tests (11/11 passed).
+  - Tested `use_item` authoritative consumption by `item_id`, optional/mismatched `item_name`, full item depletion, insufficient quantity / missing item returning HTTP 400 `ResourceError`.
+  - Tested canonical condition endpoints: `GET /api/conditions/`, `GET /api/conditions/definitions`, `GET /api/conditions/treatments`, `GET /api/conditions/{condition_id}/treatments`, and `POST /api/conditions/treat`.
+  - Verified former duplicate routes (`/api/character/conditions`, `/api/character/treatments`, `/api/character/conditions/{id}/treatments`, `/api/character/conditions/{id}/treat`) return 404.
+  - Existing condition test suite `test_conditions.py` passes 41/41.
+  - Full test suite `pytest tests/ -q` passes **297 passed**, 275 warnings.
+  - `ruff check` reports **0 errors** across entire codebase (all 13 pre-existing errors resolved); `ruff format --check` confirms all 63 files cleanly formatted.
+  - Development DB hash remains `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Findings CB-05 and CB-19 are closed.
 
 ### STAGE 6 — Global Exception Handling
 
@@ -427,7 +436,8 @@ statuses for different subtasks.
 - **Stage 3E — Verification:** COMPLETED / VERIFIED.
 - **Stage 3F — Documentation:** COMPLETED / VERIFIED.
 - **Stage 4 — Resource and Condition Mathematics:** COMPLETED / VERIFIED.
-- **Stage 5 — Inventory and Treatment Consolidation:** Next up (PLANNED).
+- **Stage 5 — Inventory and Treatment Consolidation:** COMPLETED / VERIFIED.
+- **Stage 6 — Global Exception Handling:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
 
 ---
@@ -448,7 +458,7 @@ statuses for different subtasks.
 | CB-02 | Frontend uses undefined Tailwind-style classes not present in project CSS. | Stage 8 | OPEN |
 | CB-03 | API base URL/port inconsistent (backend 8000 vs frontend config/UI 8001/8000). | Stage 8 | OPEN |
 | CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 | OPEN |
-| CB-05 | `use_item` validates `item_id` but consumes `item_name`. | Stage 5 | OPEN |
+| CB-05 | `use_item` validates `item_id` but consumes `item_name`. | Stage 5 | CLOSED — use_item validates and consumes by authoritative item_id |
 | CB-06 | Tests previously called `recreate_db()` against the development database. | Stage 0B | CLOSED — full suite passed with development DB hash unchanged during tests |
 | CB-07 | Two `advance_time` implementations; conditions do not tick when activities cross midnight. | Stage 3 | CLOSED — duplicate removed; all paths use the authoritative engine and tick conditions once per elapsed day |
 
@@ -461,7 +471,7 @@ statuses for different subtasks.
 | CB-10 | Interrupted rest subtracts health loss twice. | Stage 4 | CLOSED — Interrupted rest health change matches actual character health delta |
 | CB-11 | Duplicate health-bound validators (sync and async). | Stage 4 | CLOSED — Single shared validate_health_bounds implementation |
 | CB-17 | No global exception handler; error handling is duplicated per endpoint. | Stage 6 | OPEN |
-| CB-19 | Duplicate condition/treatment routes and divergent `TreatmentRequest` schemas. | Stage 5 | OPEN |
+| CB-19 | Duplicate condition/treatment routes and divergent `TreatmentRequest` schemas. | Stage 5 | CLOSED — canonical /api/conditions namespace and shared schemas; duplicate routes removed |
 | PR-01 | Services commit internally, breaking multi-table transaction boundaries. | Stage 2 | CLOSED — service/API commits removed; caller-owned transactions verified |
 | IF-01…IF-05 | Event system, NPC, combat, death/legacy/reincarnation, session summary are absent. | Stage 10 | OPEN |
 
@@ -609,3 +619,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-11 | Stage 3B/3C completed: removed duplicate `advance_time`, routed travel/activities through `game.time.advance_time`, removed world export, and closed CB-07. Targeted tests 90 passed; full suite 275 passed; dev DB hash unchanged. |
 | 2026-11-17 | Stage 3 completed: aligned API responses (PR-12 `days_advanced` & `expired_conditions`, CB-18 optional `session_token` with `null` default and 404 error mapping), added test coverage in `test_time_api.py` (9/9 passed), verified full suite (277 passed), and preserved dev DB hash. Closed CB-18 and PR-12. |
 | 2026-11-17 | Stage 4 completed: fixed interrupted rest health change delta (CB-10), consolidated single async `validate_health_bounds` (CB-11), removed debug block with undefined `TREATMENTS` (CB-12), handled 0-overrides and negative validation for condition severity/duration (CB-13), clamped resource percentages to [0.0, 100.0] (CB-14), checked available stamina against effective max stamina (CB-15), clarified deterministic RNG seed fallback allowing seed 0 (PR-10), and verified condition effects persist in caller transaction (CB-16). Targeted tests 9/9 passed, full suite 286 passed, dev DB hash unchanged. |
+| 2026-11-17 | Stage 5 completed: resolved item identity mismatch in use_item to consume strictly by item_id (CB-05), consolidated condition and treatment routes under canonical /api/conditions namespace, moved condition treatment query to GET /api/conditions/{id}/treatments, removed duplicate routes from /api/character, unified TreatmentRequest/Response schemas in schemas/conditions.py, fixed local variable shadowing bug in inventory service (F823), resolved all 13 remaining project Ruff errors (0 errors across codebase), added 11 integration tests in test_stage5_inventory_consolidation.py (11/11 passed), verified full test suite (297 passed), and preserved dev DB hash. Closed CB-05 and CB-19. |

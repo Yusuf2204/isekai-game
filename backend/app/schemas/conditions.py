@@ -39,6 +39,24 @@ class TreatmentResponse(BaseModel):
     new_severity: int
     treatment_used: str
     description: str
+    item_consumed: dict | None = None
+
+
+class AvailableTreatmentItem(BaseModel):
+    """Schema for an available treatment item."""
+
+    treatment_id: str
+    name: str
+    description: str
+    severity_reduction: int
+    in_inventory: bool
+
+
+class AvailableTreatmentsResponse(BaseModel):
+    """Response schema for available treatments for a condition."""
+
+    condition_id: str
+    available_treatments: list[AvailableTreatmentItem]
 
 
 class ConditionDefinitionResponse(BaseModel):

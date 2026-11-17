@@ -6,11 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db_session
-from app.core.exceptions import GameError, NotFoundError, ValidationError
+from app.core.exceptions import GameError, NotFoundError, ResourceError, ValidationError
 from app.models.gameplay import Character
 from app.schemas.conditions import (
     AllConditionsResponse,
     AllTreatmentsResponse,
+    AvailableTreatmentsResponse,
     ConditionDefinitionResponse,
     ConditionListResponse,
     ConditionResponse,
@@ -23,10 +24,11 @@ from app.services.character.conditions import (
     get_character_conditions,
     treat_condition,
 )
+from app.services.character.creation import get_or_create_session
 from app.services.character.inventory import (
     get_all_treatments,
+    get_available_treatments_for_condition,
 )
-from app.services.character.creation import get_or_create_session
 
 router = APIRouter(tags=["conditions"], prefix="/conditions")
 
@@ -34,13 +36,17 @@ router = APIRouter(tags=["conditions"], prefix="/conditions")
 async def _get_character_with_relations(
     session: AsyncSession, game_session_id: int, generation: int
 ) -> Character | None:
-    """Get character with attributes and skills eagerly loaded."""
+    """Get character with attributes, skills, and inventory eagerly loaded."""
     result = await session.execute(
         select(Character)
         .where(
             Character.session_id == game_session_id, Character.generation == generation
         )
-        .options(selectinload(Character.attributes), selectinload(Character.skills))
+        .options(
+            selectinload(Character.attributes),
+            selectinload(Character.skills),
+            selectinload(Character.inventory),
+        )
     )
     return result.scalar_one_or_none()
 
@@ -113,10 +119,10 @@ async def get_all_treatments_endpoint() -> AllTreatmentsResponse:
     """
     Get all available treatment definitions (for reference).
     """
-    TREATMENTS = await get_all_treatments()
+    treatments_dict = await get_all_treatments()
 
     treatments = []
-    for treat_id, treat in TREATMENTS.items():
+    for treat_id, treat in treatments_dict.items():
         treatments.append(
             TreatmentDefinitionResponse(
                 id=treat_id,
@@ -128,6 +134,57 @@ async def get_all_treatments_endpoint() -> AllTreatmentsResponse:
         )
 
     return AllTreatmentsResponse(treatments=treatments)
+
+
+@router.get("/{condition_id}/treatments", response_model=AvailableTreatmentsResponse)
+async def get_available_treatments_endpoint(
+    condition_id: str,
+    session_token: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> AvailableTreatmentsResponse:
+    """
+    Get available treatments for a specific condition that are in inventory.
+    """
+    try:
+        # Get session
+        game_session = await get_or_create_session(session, session_token)
+
+        # Get current character
+        character = await _get_character_with_relations(
+            session, game_session.id, game_session.current_generation
+        )
+        if character is None:
+            raise NotFoundError("Character", "current generation")
+
+        # Check if condition exists
+        if not character.conditions or condition_id not in character.conditions:
+            raise NotFoundError("Condition", condition_id)
+
+        # Get available treatments
+        available = await get_available_treatments_for_condition(
+            session, character, condition_id
+        )
+
+        return AvailableTreatmentsResponse(
+            condition_id=condition_id,
+            available_treatments=available,
+        )
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": e.code, "message": e.message, "details": e.details},
+        )
+    except (ValidationError, ResourceError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": e.code, "message": e.message, "details": e.details},
+        )
+    except GameError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": e.code, "message": e.message, "details": e.details},
+        )
 
 
 @router.post("/treat", response_model=TreatmentResponse)
@@ -162,7 +219,7 @@ async def treat_condition_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": e.code, "message": e.message, "details": e.details},
         )
-    except ValidationError as e:
+    except (ValidationError, ResourceError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": e.code, "message": e.message, "details": e.details},
