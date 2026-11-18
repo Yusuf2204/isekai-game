@@ -11,3 +11,22 @@ export interface ApiError {
   message: string;
   details: Record<string, unknown>;
 }
+
+export class ApiClientError extends Error {
+  readonly error: string;
+  readonly details: Record<string, unknown>;
+  readonly status: number;
+
+  constructor(
+    message: string,
+    error: string = 'API_ERROR',
+    status: number = 500,
+    details: Record<string, unknown> = {}
+  ) {
+    super(message);
+    this.name = 'ApiClientError';
+    this.error = error;
+    this.status = status;
+    this.details = details;
+  }
+}

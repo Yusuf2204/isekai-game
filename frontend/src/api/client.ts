@@ -1,10 +1,10 @@
 /** API client for backend communication. */
 
-import type { HealthResponse, ApiError } from '../types/api';
+import { ApiClientError, type ApiError, type HealthResponse } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-class ApiClient {
+export class ApiClient {
   private baseUrl: string;
 
   constructor(baseUrl: string = API_BASE_URL) {
@@ -26,12 +26,47 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData: ApiError = await response.json().catch(() => ({
-        error: 'UNKNOWN_ERROR',
-        message: `HTTP ${response.status}: ${response.statusText}`,
-        details: {},
-      }));
-      throw new Error(errorData.message);
+      let message = `HTTP ${response.status}: ${response.statusText}`;
+      let errorCode = 'HTTP_ERROR';
+      let details: Record<string, unknown> = {};
+
+      try {
+        const raw: unknown = await response.json();
+        if (raw && typeof raw === 'object') {
+          const payload = raw as Partial<ApiError> & { detail?: unknown };
+
+          // Standard backend error envelope (Stage 6)
+          if (typeof payload.message === 'string' && payload.message.trim()) {
+            message = payload.message;
+          } else if (typeof payload.detail === 'string' && payload.detail.trim()) {
+            // Standard FastAPI HTTP exception detail string
+            message = payload.detail;
+          } else if (
+            payload.detail &&
+            typeof payload.detail === 'object' &&
+            'message' in payload.detail &&
+            typeof (payload.detail as { message: unknown }).message === 'string'
+          ) {
+            message = (payload.detail as { message: string }).message;
+          }
+
+          if (typeof payload.error === 'string' && payload.error.trim()) {
+            errorCode = payload.error;
+          }
+
+          if (
+            payload.details &&
+            typeof payload.details === 'object' &&
+            !Array.isArray(payload.details)
+          ) {
+            details = payload.details as Record<string, unknown>;
+          }
+        }
+      } catch {
+        // Fallback to default message when response is not JSON
+      }
+
+      throw new ApiClientError(message, errorCode, response.status, details);
     }
 
     return response.json() as Promise<T>;
@@ -41,17 +76,17 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, data: unknown): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T>(endpoint: string, data: unknown): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: data !== undefined ? JSON.stringify(data) : undefined,
     });
   }
 

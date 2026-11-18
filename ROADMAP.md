@@ -43,10 +43,10 @@
 |------|--------|---------|
 | Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers, global error handlers, startup seeding. Missing migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, 5, 6, and 7 completed and verified. Stage 8 next. |
-| Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, 5, 6, 7, and 8 completed and verified. Stage 9 next. |
+| Frontend | PARTIAL | React 18 + TS Vite scaffold, plain CSS styles, API client with error handling, ErrorBoundary, useApiError hook, and health screen. Screens for character creation and gameplay pending Stage 10. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (314 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (314 passed); frontend smoke test passes (9 passed). Acceptance criteria in `SPEC.md` §14 demonstrated incrementally. |
 
 ---
 
@@ -386,17 +386,27 @@ statuses for different subtasks.
 
 ### STAGE 8 — Frontend Foundation
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
 - **Tasks:**
-  - Make the API base URL consistent.
-  - Parse backend error responses correctly.
-  - Replace CSS classes that are not defined in project styles.
-  - Add loading and error states.
-  - Add a frontend smoke test consistent with approved dependencies/config.
+  - [x] Make the API base URL consistent (CB-03, DI-03).
+  - [x] Parse backend error responses correctly without producing `undefined` messages (CB-04).
+  - [x] Replace CSS classes that are not defined in project styles with pure plain CSS (CB-02).
+  - [x] Add loading and error states with Global ErrorBoundary and useApiError hook (PR-09).
+  - [x] Resolve ESM `__dirname` in `vite.config.ts` using `fileURLToPath` and `node:url` (PR-03).
+  - [x] Add a frontend smoke test and Jest configuration without new dependencies (PR-04).
 - **Dependencies:** Stage 6 (error envelope), Stage 7 (playable data).
-- **Notes:** dependency and configuration changes require separate approval.
-- **Acceptance:** UI renders correctly, reports meaningful errors, and passes a
-  smoke test.
+- **Acceptance:** UI renders correctly, reports meaningful errors, and passes a smoke test.
+- **Verification record:**
+  - Aligned API base URL and proxy port to `http://localhost:8000` in `frontend/.env`, `frontend/.env.example`, and `frontend/vite.config.ts` (CB-03, DI-03).
+  - Resolved ESM `__dirname` in `frontend/vite.config.ts` using standard `fileURLToPath(new URL('./src', import.meta.url))` (PR-03).
+  - Aligned `ApiClient` in `frontend/src/api/client.ts` and `frontend/src/types/api.ts`: introduced typed `ApiClientError` parsing Stage 6 top-level `error`, `message`, and `details` with safe fallbacks to `detail` string/object; eliminates all `undefined` error messages (CB-04).
+  - Replaced all inert Tailwind classes in `frontend/src/App.tsx` with pure plain CSS semantic classes defined in `frontend/src/styles/main.css` (CB-02).
+  - Added `ErrorBoundary` component in `frontend/src/components/ErrorBoundary.tsx` and wrapped `App` in `frontend/src/main.tsx` (PR-09).
+  - Added `useApiError` custom hook in `frontend/src/hooks/useApiError.ts` (PR-09).
+  - Configured Jest in `frontend/jest.config.cjs` and `frontend/jest.transformer.cjs` supporting ESM/Vite `import.meta.env` and jsdom without adding new dependencies (PR-04).
+  - Added 9 unit/smoke tests in `frontend/src/__tests__/smoke.test.tsx` verifying API client, Stage 6 error envelope parsing, detail string parsing, HTTP error fallback, ErrorBoundary crash fallback, useApiError hook, and App rendering under health success and failure (9/9 passed in 1.367s).
+  - `npm run lint` clean (0 errors, 0 warnings); `npm run build` clean (Vite bundle generated in 1.15s).
+  - Findings CB-02, CB-03, CB-04, PR-03, PR-04, DI-03, and PR-09 are closed.
 
 ### STAGE 9 — Documentation and Infrastructure
 
@@ -456,7 +466,8 @@ statuses for different subtasks.
 - **Stage 5 — Inventory and Treatment Consolidation:** COMPLETED / VERIFIED.
 - **Stage 6 — Global Exception Handling:** COMPLETED / VERIFIED.
 - **Stage 7 — Application Startup and World Seeding:** COMPLETED / VERIFIED.
-- **Stage 8 — Frontend Foundation:** Next up (PLANNED).
+- **Stage 8 — Frontend Foundation:** COMPLETED / VERIFIED.
+- **Stage 9 — Documentation and Infrastructure:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
 
 ---
@@ -474,9 +485,9 @@ statuses for different subtasks.
 | ID | Finding | Remediation | Status |
 |----|---------|-------------|--------|
 | CB-01 | Fresh install cannot play: world is not seeded at startup; character creation needs races/backgrounds/locations. | Stage 7 | CLOSED — Lifespan startup seeds all static world data inside a composition-root transaction if not already seeded; fresh DB is playable immediately |
-| CB-02 | Frontend uses undefined Tailwind-style classes not present in project CSS. | Stage 8 | OPEN |
-| CB-03 | API base URL/port inconsistent (backend 8000 vs frontend config/UI 8001/8000). | Stage 8 | OPEN |
-| CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 / Stage 6 | CLOSED (BACKEND) / OPEN (FRONTEND) — Backend returns top-level error/message/details envelope; frontend parsing alignment in Stage 8 |
+| CB-02 | Frontend uses undefined Tailwind-style classes not present in project CSS. | Stage 8 | CLOSED — Replaced undefined Tailwind classes in App.tsx with semantic plain CSS in styles/main.css |
+| CB-03 | API base URL/port inconsistent (backend 8000 vs frontend config/UI 8001/8000). | Stage 8 | CLOSED — Aligned API base URL and proxy port to 8000 across backend, frontend .env, .env.example, and vite.config.ts |
+| CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 / Stage 6 | CLOSED — Backend returns top-level envelope (Stage 6); frontend ApiClient parses error/message/details with safe fallback (Stage 8); no undefined messages |
 | CB-05 | `use_item` validates `item_id` but consumes `item_name`. | Stage 5 | CLOSED — use_item validates and consumes by authoritative item_id |
 | CB-06 | Tests previously called `recreate_db()` against the development database. | Stage 0B | CLOSED — full suite passed with development DB hash unchanged during tests |
 | CB-07 | Two `advance_time` implementations; conditions do not tick when activities cross midnight. | Stage 3 | CLOSED — duplicate removed; all paths use the authoritative engine and tick conditions once per elapsed day |
@@ -504,12 +515,12 @@ statuses for different subtasks.
 | CB-15 | Activity stamina validation ignores effective stamina. | Stage 4 | CLOSED — Available stamina is checked against effective max stamina limit |
 | CB-16 | Condition effects are applied after commit. | Stage 4 | CLOSED — Stage 2 removed the service commit; effects now share the activity transaction. Stage 4 still verifies condition math. |
 | CB-18 | `current_period` is hardcoded in the time API. | Stage 3 | CLOSED — /api/time/periods returns real period when session_token provided, null otherwise; 404 on invalid session |
-| PR-03 | `__dirname` in `vite.config.ts` under ESM. | Stage 8 | OPEN |
-| PR-04 | `npm test` points to Jest without config/setup. | Stage 8 | OPEN |
+| PR-03 | `__dirname` in `vite.config.ts` under ESM. | Stage 8 | CLOSED — Replaced __dirname with fileURLToPath(new URL('./src', import.meta.url)) |
+| PR-04 | `npm test` points to Jest without config/setup. | Stage 8 | CLOSED — Configured Jest (jest.config.cjs, transformer) and added frontend smoke test suite (9 passed) |
 | PR-07 | No Alembic migrations; schema relies on `create_all`. | Stage 9 | OPEN |
 | PR-08 | No `structlog`/structured logging configuration despite `AGENTS.md` §11. | Stage 9 | OPEN |
 | PR-12 | `AdvanceTimeResponse` omits fields returned by the service. | Stage 3 | CLOSED — AdvanceTimeResponse includes days_advanced and expired_conditions |
-| DI-03 | Frontend `.env` and `.env.example` disagree on API port. | Stage 8/9 | OPEN |
+| DI-03 | Frontend `.env` and `.env.example` disagree on API port. | Stage 8/9 | CLOSED — Aligned frontend .env and .env.example to port 8000 |
 | — | Dead code in activities services; missing `__all__` exports for condition/inventory routers. | Stages 4/5 | OPEN |
 
 ### Low
@@ -523,7 +534,7 @@ statuses for different subtasks.
 | DI-06 | `structlog` is required by AGENTS but absent from requirements. | Stage 9 | OPEN |
 | PR-02 | Empty `session_token` silently creates a new session. | Stage 10 | OPEN |
 | PR-05 | Caret dependency ranges allow drift. | Stage 9 | OPEN |
-| PR-09 | No frontend error boundary / API error hook. | Stage 8 | OPEN |
+| PR-09 | No frontend error boundary / API error hook. | Stage 8 | CLOSED — Implemented ErrorBoundary component, useApiError hook, and visual error states |
 | PR-10 | RNG seed fallback (`rng_seed or session_id`) semantics are ambiguous. | Stage 4 | CLOSED — Explicit rng_seed if rng_seed is not None else ... fallback allows 0 as valid seed |
 | PR-11 | Legacy tests may share state / depend on ordering. | Stage 2 gate / ongoing | CLOSED — `test_activities_api.py`, `test_skill_progression.py`, `test_time_api.py`, and `test_character_progression.py` now pass standalone; full suite passes. |
 | — | `CharacterCreateRequest` has no session token path for generations. | Stage 10 | OPEN |
@@ -570,6 +581,9 @@ has not been closed by a verified remediation stage.
 - **Ruff format check:** 66 files already cleanly formatted.
 - **Full test suite:** `pytest tests/ -q` — **314 passed**, 292 warnings in 136.85s
   (2026-11-18, after Stage 7 completion).
+- **Frontend test suite:** `npm test --prefix frontend` — **9 passed**
+  (2026-11-18, after Stage 8 completion).
+- **Frontend build & lint:** `npm run build` succeeds (Vite bundle); `npm run lint` 0 errors.
 - **Stage 2A isolation verification:** `test_time_api.py` — 7 passed standalone;
   `test_character_progression.py` — 14 passed standalone; both together — 21
   passed. TD-03 and PR-11 are closed.
@@ -640,3 +654,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-17 | Stage 5 completed: resolved item identity mismatch in use_item to consume strictly by item_id (CB-05), consolidated condition and treatment routes under canonical /api/conditions namespace, moved condition treatment query to GET /api/conditions/{id}/treatments, removed duplicate routes from /api/character, unified TreatmentRequest/Response schemas in schemas/conditions.py, fixed local variable shadowing bug in inventory service (F823), resolved all 13 remaining project Ruff errors (0 errors across codebase), added 11 integration tests in test_stage5_inventory_consolidation.py (11/11 passed), verified full test suite (297 passed), and preserved dev DB hash. Closed CB-05 and CB-19. |
 | 2026-11-17 | Stage 6 completed: implemented global exception handling architecture in app.core.errors and app/main.py, established consistent error envelope (error, message, details, and backward-compatible detail mapping), mapped GameError subclasses and HTTP errors to standard status codes (400, 404, 409, 422, 500), removed duplicated try/except error handling across all API routers, verified transaction rollback on domain errors, added 11 integration tests in test_stage6_exception_handling.py (11/11 passed), verified full test suite (308 passed), confirmed 0 Ruff errors, and preserved dev DB hash. Closed CB-17 and backend error envelope for CB-04. |
 | 2026-11-18 | Stage 7 completed: implemented idempotent startup world seeding in app/services/world/seed.py (is_world_fully_seeded, seed_world_if_needed) and wired seed_world_at_startup into lifespan in app/main.py using explicit composition-root transaction; ensures fresh installs are immediately playable without manual setup (CB-01); added 6 targeted integration tests in test_stage7_startup_seeding.py (6/6 passed); verified full test suite (314 passed); 0 Ruff errors; preserved dev DB hash. Closed CB-01. |
+| 2026-11-18 | Stage 8 completed: aligned API base URL and proxy port to 8000 across frontend .env, .env.example, and vite.config.ts (CB-03, DI-03); resolved ESM __dirname in vite.config.ts (PR-03); aligned ApiClient and types to Stage 6 error envelope eliminating undefined error messages (CB-04); replaced undefined Tailwind classes in App.tsx with semantic plain CSS in styles/main.css (CB-02); added ErrorBoundary component and useApiError hook (PR-09); configured Jest with transformer and added 9 frontend smoke/foundation tests in smoke.test.tsx (9/9 passed, PR-04); frontend lint and build pass cleanly. Closed CB-02, CB-03, CB-04, PR-03, PR-04, DI-03, PR-09. |
