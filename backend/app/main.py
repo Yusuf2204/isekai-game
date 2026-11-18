@@ -1,11 +1,12 @@
 """FastAPI application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import init_db, close_db
+from app.core.database import close_db, get_session, init_db
 from app.core.errors import register_error_handlers
 from app.api.health import router as health_router
 from app.api.character import router as character_router
@@ -14,6 +15,27 @@ from app.api.time import router as time_router
 from app.api.activities import router as activities_router
 from app.api.conditions import router as conditions_router
 from app.api.inventory import router as inventory_router
+from app.services.world.seed import is_world_fully_seeded, seed_world
+
+logger = logging.getLogger("isekai.api")
+
+
+async def seed_world_at_startup() -> dict | None:
+    """Run world seeding at application startup inside one explicit composition-root transaction.
+
+    Idempotent: does not duplicate entities if already seeded.
+    Does not call recreate_db().
+    """
+    async with get_session() as session:
+        if not await is_world_fully_seeded(session):
+            logger.info(
+                "Database requires world static data seeding; running seed_world..."
+            )
+            summary = await seed_world(session)
+            logger.info("World static data seeded successfully at startup.")
+            return summary
+        logger.debug("Database already contains all required world static data.")
+        return None
 
 
 @asynccontextmanager
@@ -21,6 +43,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     await init_db()
+    await seed_world_at_startup()
     yield
     # Shutdown
     await close_db()

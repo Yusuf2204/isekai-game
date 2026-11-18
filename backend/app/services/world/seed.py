@@ -1108,3 +1108,53 @@ async def seed_world(session: AsyncSession) -> dict:
         "enemies_count": len(enemies),
         "enemies": [enemy.display_name for enemy in enemies],
     }
+
+
+async def is_world_fully_seeded(session: AsyncSession) -> bool:
+    """Check if all static world entities are already present in the database.
+
+    Returns True only if kingdom, all regions, all locations, all races,
+    all backgrounds, and all enemies exist.
+    """
+    from sqlalchemy import func
+
+    kingdom_count = await session.scalar(select(func.count(Kingdom.id)))
+    if not kingdom_count:
+        return False
+
+    region_count = await session.scalar(select(func.count(Region.id)))
+    if region_count < len(REGIONS_DATA):
+        return False
+
+    location_count = await session.scalar(select(func.count(Location.id)))
+    if location_count < len(LOCATIONS_DATA):
+        return False
+
+    race_count = await session.scalar(select(func.count(Race.id)))
+    if race_count < len(RACES_DATA):
+        return False
+
+    bg_count = await session.scalar(select(func.count(Background.id)))
+    if bg_count < len(BACKGROUNDS_DATA):
+        return False
+
+    enemy_count = await session.scalar(select(func.count(Enemy.id)))
+    if enemy_count < len(ENEMIES_DATA):
+        return False
+
+    return True
+
+
+async def seed_world_if_needed(session: AsyncSession) -> dict:
+    """Seed world static data if not already fully present in the database.
+
+    Idempotent: will not duplicate existing entities.
+    Flushes only; the caller owns the transaction boundary.
+
+    Returns:
+        Summary dict of seeded entities, or a status dict if already seeded.
+    """
+    if await is_world_fully_seeded(session):
+        return {"status": "already_seeded"}
+
+    return await seed_world(session)

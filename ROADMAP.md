@@ -41,12 +41,12 @@
 
 | Area | Status | Summary |
 |------|--------|---------|
-| Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers. Missing global exception handler, startup seeding, migrations. |
+| Backend foundation | PARTIAL | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers, global error handlers, startup seeding. Missing migrations. |
 | Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment. Events, NPC, combat, death/legacy, reincarnation, session summary not implemented. |
-| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, 5, and 6 completed and verified. Stage 7 next. |
+| Backend reliability and remediation | IN PROGRESS | Stages 0, 1, 2, 3, 4, 5, 6, and 7 completed and verified. Stage 8 next. |
 | Frontend | PARTIAL | Vite/React scaffold and a health screen. Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary screens not implemented. Known CSS/URL/error-parsing issues. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
-| Integration and acceptance testing | PARTIAL | Full backend suite passes (308 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
+| Integration and acceptance testing | PARTIAL | Full backend suite passes (314 passed). Frontend tests not runnable as configured. Acceptance criteria in `SPEC.md` §14 not yet demonstrated. |
 
 ---
 
@@ -364,18 +364,25 @@ statuses for different subtasks.
 
 ### STAGE 7 — Application Startup and World Seeding
 
-- **Status:** PLANNED — NOT STARTED.
+- **Status:** COMPLETED / VERIFIED.
 - **Tasks:**
-  - Make a fresh installation playable.
-  - Run world seeding safely at startup inside one explicit composition-root
-    transaction.
-  - Keep seeding idempotent.
-  - Do not call `recreate_db()` at startup.
-  - Do not damage or unnecessarily rewrite an existing database.
+  - [x] Make a fresh installation playable (CB-01).
+  - [x] Run world seeding safely at startup inside one explicit composition-root transaction.
+  - [x] Keep seeding idempotent (`is_world_fully_seeded` check avoids unnecessary writes).
+  - [x] Do not call `recreate_db()` at startup.
+  - [x] Do not damage or unnecessarily rewrite an existing database.
 - **Dependencies:** Stages 0B, 1, 2.
-- **Acceptance:** fresh DB can create a character immediately; repeated startup
-  does not duplicate seed data; an existing database remains intact except for
-  missing seed rows or explicitly approved seed-data reconciliation.
+- **Acceptance:** fresh DB can create a character immediately; repeated startup does not duplicate seed data; an existing database remains intact except for missing seed rows or explicitly approved seed-data reconciliation.
+- **Verification record:**
+  - Implemented `is_world_fully_seeded(session: AsyncSession) -> bool` and `seed_world_if_needed(session: AsyncSession) -> dict` in `app/services/world/seed.py`.
+  - Wired `seed_world_at_startup()` into FastAPI application `lifespan(app)` in `app/main.py` using `async with get_session() as session:` composition-root transaction.
+  - Guarantees idempotency: checks `is_world_fully_seeded(session)` before seeding. Fully populated databases undergo zero write transactions or file modifications.
+  - Fresh installs now immediately create tables and seed kingdom, regions, locations, races, backgrounds, and enemies, making fresh installations playable immediately without manual setup (CB-01).
+  - Added 6 targeted integration tests in `backend/tests/test_stage7_startup_seeding.py` verifying fresh DB startup seeding, immediate playable character creation without manual seeding, repeated startup idempotency, partial seed recovery, and regression check that `recreate_db()` is never called.
+  - Full test suite passes **314 passed**, 292 warnings in 136.85s.
+  - `ruff check` reports **0 errors** across entire codebase (66 files); `ruff format --check` confirms all 66 files cleanly formatted.
+  - Development DB hash remains `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Finding CB-01 is closed.
 
 ### STAGE 8 — Frontend Foundation
 
@@ -448,7 +455,8 @@ statuses for different subtasks.
 - **Stage 4 — Resource and Condition Mathematics:** COMPLETED / VERIFIED.
 - **Stage 5 — Inventory and Treatment Consolidation:** COMPLETED / VERIFIED.
 - **Stage 6 — Global Exception Handling:** COMPLETED / VERIFIED.
-- **Stage 7 — Application Startup and World Seeding:** Next up (PLANNED).
+- **Stage 7 — Application Startup and World Seeding:** COMPLETED / VERIFIED.
+- **Stage 8 — Frontend Foundation:** Next up (PLANNED).
 - **No further remediation implementation is currently in progress.**
 
 ---
@@ -465,7 +473,7 @@ statuses for different subtasks.
 
 | ID | Finding | Remediation | Status |
 |----|---------|-------------|--------|
-| CB-01 | Fresh install cannot play: world is not seeded at startup; character creation needs races/backgrounds/locations. | Stage 7 | OPEN |
+| CB-01 | Fresh install cannot play: world is not seeded at startup; character creation needs races/backgrounds/locations. | Stage 7 | CLOSED — Lifespan startup seeds all static world data inside a composition-root transaction if not already seeded; fresh DB is playable immediately |
 | CB-02 | Frontend uses undefined Tailwind-style classes not present in project CSS. | Stage 8 | OPEN |
 | CB-03 | API base URL/port inconsistent (backend 8000 vs frontend config/UI 8001/8000). | Stage 8 | OPEN |
 | CB-04 | Frontend parses the wrong error field, producing `undefined` messages. | Stage 8 / Stage 6 | CLOSED (BACKEND) / OPEN (FRONTEND) — Backend returns top-level error/message/details envelope; frontend parsing alignment in Stage 8 |
@@ -550,19 +558,18 @@ has not been closed by a verified remediation stage.
   canary (`backend/tests/test_db_isolation_canary.py`), the Stage 1 test file
   (`backend/tests/test_stage1_rng_and_skills.py`), the Stage 2 transaction test
   file (`backend/tests/test_transaction_ownership.py`), the Stage 3
-  time-authority test file (`backend/tests/test_stage3_time_authority.py`), and
-  the Stage 4 resource-math test file
-  (`backend/tests/test_stage4_resource_math.py`) — 17 files total under
-  `backend/tests/`.
+  time-authority test file (`backend/tests/test_stage3_time_authority.py`), the
+  Stage 4 resource-math test file (`backend/tests/test_stage4_resource_math.py`),
+  the Stage 5 inventory-consolidation test file (`backend/tests/test_stage5_inventory_consolidation.py`),
+  the Stage 6 exception-handling test file (`backend/tests/test_stage6_exception_handling.py`),
+  and the Stage 7 startup-seeding test file (`backend/tests/test_stage7_startup_seeding.py`) —
+  20 files total under `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
-- **Ruff check:** 13 pre-existing errors remain in `inventory.py`/`schemas/inventory.py`
-  (reduced from 22 after cleaning unused imports, duplicate symbols, and undefined
-  TREATMENTS in Stage 4). The Stage 2, 3, and 4 test and service files pass
-  `ruff check`.
-- **Ruff format check:** All Stage 4 touched files are formatted.
-- **Full test suite:** `pytest tests/ -q` — **286 passed**, 264 warnings
-  (2026-11-17, after Stage 4 completion).
+- **Ruff check:** 0 errors across entire repository (all 66 files clean).
+- **Ruff format check:** 66 files already cleanly formatted.
+- **Full test suite:** `pytest tests/ -q` — **314 passed**, 292 warnings in 136.85s
+  (2026-11-18, after Stage 7 completion).
 - **Stage 2A isolation verification:** `test_time_api.py` — 7 passed standalone;
   `test_character_progression.py` — 14 passed standalone; both together — 21
   passed. TD-03 and PR-11 are closed.
@@ -574,8 +581,8 @@ has not been closed by a verified remediation stage.
   `5c746a7a0611b3af21bae1398a68546b2dcb0868b381bc7d42bef06881903824`;
   backup is stored at
   `/tmp/opencode/isekai-db-backups/isekai.db.bak.20261111T083905207573128Z`.
-  Hash remained unchanged during Stage 2A, Stage 2, Stage 3, and Stage 4
-  final completion verification.
+  Hash remained unchanged during Stage 2A, Stage 2, Stage 3, Stage 4, Stage 5,
+  Stage 6, and Stage 7 final completion verification.
 - **Test database artifact:** `backend/test_isekai.db` was created by the canary
   run and is gitignored; the session fixture removes stale test DB files on the
   next run.
@@ -632,3 +639,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-17 | Stage 4 completed: fixed interrupted rest health change delta (CB-10), consolidated single async `validate_health_bounds` (CB-11), removed debug block with undefined `TREATMENTS` (CB-12), handled 0-overrides and negative validation for condition severity/duration (CB-13), clamped resource percentages to [0.0, 100.0] (CB-14), checked available stamina against effective max stamina (CB-15), clarified deterministic RNG seed fallback allowing seed 0 (PR-10), and verified condition effects persist in caller transaction (CB-16). Targeted tests 9/9 passed, full suite 286 passed, dev DB hash unchanged. |
 | 2026-11-17 | Stage 5 completed: resolved item identity mismatch in use_item to consume strictly by item_id (CB-05), consolidated condition and treatment routes under canonical /api/conditions namespace, moved condition treatment query to GET /api/conditions/{id}/treatments, removed duplicate routes from /api/character, unified TreatmentRequest/Response schemas in schemas/conditions.py, fixed local variable shadowing bug in inventory service (F823), resolved all 13 remaining project Ruff errors (0 errors across codebase), added 11 integration tests in test_stage5_inventory_consolidation.py (11/11 passed), verified full test suite (297 passed), and preserved dev DB hash. Closed CB-05 and CB-19. |
 | 2026-11-17 | Stage 6 completed: implemented global exception handling architecture in app.core.errors and app/main.py, established consistent error envelope (error, message, details, and backward-compatible detail mapping), mapped GameError subclasses and HTTP errors to standard status codes (400, 404, 409, 422, 500), removed duplicated try/except error handling across all API routers, verified transaction rollback on domain errors, added 11 integration tests in test_stage6_exception_handling.py (11/11 passed), verified full test suite (308 passed), confirmed 0 Ruff errors, and preserved dev DB hash. Closed CB-17 and backend error envelope for CB-04. |
+| 2026-11-18 | Stage 7 completed: implemented idempotent startup world seeding in app/services/world/seed.py (is_world_fully_seeded, seed_world_if_needed) and wired seed_world_at_startup into lifespan in app/main.py using explicit composition-root transaction; ensures fresh installs are immediately playable without manual setup (CB-01); added 6 targeted integration tests in test_stage7_startup_seeding.py (6/6 passed); verified full test suite (314 passed); 0 Ruff errors; preserved dev DB hash. Closed CB-01. |

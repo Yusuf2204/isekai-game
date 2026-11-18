@@ -1,6 +1,10 @@
 """World service package."""
 
-from app.services.world.seed import seed_world
+from app.services.world.seed import (
+    is_world_fully_seeded,
+    seed_world,
+    seed_world_if_needed,
+)
 from app.services.world.locations import (
     get_kingdom,
     get_regions,
@@ -13,7 +17,9 @@ from app.services.world.locations import (
 )
 
 __all__ = [
+    "is_world_fully_seeded",
     "seed_world",
+    "seed_world_if_needed",
     "get_kingdom",
     "get_regions",
     "get_locations",
