@@ -32,6 +32,16 @@ from app.schemas.activities import (
     WorkResponse,
     ActivityListResponse,
 )
+from app.schemas.events import (
+    ActiveEventResponse,
+    EventChoiceOptionSchema,
+    EventChoiceRequest,
+    EventDefinitionSummarySchema,
+    EventDisplaySchema,
+    EventResolutionResponse,
+    EventTriggerRequest,
+    StatCheckResultSchema,
+)
 
 __all__ = [
     "HealthResponse",
@@ -58,4 +68,12 @@ __all__ = [
     "WorkRequest",
     "WorkResponse",
     "ActivityListResponse",
+    "ActiveEventResponse",
+    "EventChoiceOptionSchema",
+    "EventChoiceRequest",
+    "EventDefinitionSummarySchema",
+    "EventDisplaySchema",
+    "EventResolutionResponse",
+    "EventTriggerRequest",
+    "StatCheckResultSchema",
 ]

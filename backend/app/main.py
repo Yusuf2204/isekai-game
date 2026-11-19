@@ -16,6 +16,7 @@ from app.api.time import router as time_router
 from app.api.activities import router as activities_router
 from app.api.conditions import router as conditions_router
 from app.api.inventory import router as inventory_router
+from app.api.events import router as events_router
 from app.services.world.seed import is_world_fully_seeded, seed_world
 
 logger = logging.getLogger("isekai.api")
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(activities_router, prefix="/api")
     app.include_router(conditions_router, prefix="/api")
     app.include_router(inventory_router, prefix="/api")
+    app.include_router(events_router, prefix="/api")
 
     return app
 

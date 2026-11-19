@@ -227,6 +227,11 @@ class CharacterAttribute(Base, TimestampMixin):
         UniqueConstraint("character_id", "name", name="uq_character_attribute"),
     )
 
+    @property
+    def experience_for_next_level(self) -> int:
+        """Calculate experience needed for next level."""
+        return self.current_value * 100 + 50
+
     def __repr__(self) -> str:
         return f"<CharacterAttribute({self.name.value}={self.current_value})>"
 
