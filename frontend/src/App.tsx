@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiClient } from './api/client';
 import { GameProvider, useGame } from './context/GameContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { CharacterCreationScreen } from './screens/CharacterCreationScreen';
 import { CombatScreen } from './screens/CombatScreen';
 import { DeathReincarnationScreen } from './screens/DeathReincarnationScreen';
@@ -45,13 +46,24 @@ const AppContent: React.FC<{
   loading: boolean;
   error: string | null;
 }> = ({ health, loading, error }) => {
+  const { language, toggleLanguage, t } = useLanguage();
+
   return (
     <div className="app-layout">
       <header className="app-header">
         <div className="container">
           <div className="app-header-inner">
-            <h1 className="app-title">Isekai: A Life Unwritten</h1>
-            <div className="flex items-center gap-4">
+            <h1 className="app-title">{t.common.title}</h1>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="lang-toggle-btn"
+                onClick={toggleLanguage}
+                title={language === 'id' ? 'Switch to English' : 'Ganti ke Bahasa Indonesia'}
+                aria-label="Toggle language"
+              >
+                🌐 {language === 'id' ? 'ID (Bahasa)' : 'EN (English)'}
+              </button>
               <span className="app-version">v0.1.0</span>
               {health && (
                 <span className="badge badge-teal" style={{ textTransform: 'none' }}>
@@ -68,11 +80,9 @@ const AppContent: React.FC<{
         {error && (
           <div className="container mt-4">
             <div className="alert alert-error" role="alert">
-              <p className="alert-title">Connection Failed</p>
+              <p className="alert-title">{t.header.connectionFailed}</p>
               <p className="alert-message">{error}</p>
-              <p className="alert-hint">
-                Make sure the backend is running on <code>http://localhost:8000</code>
-              </p>
+              <p className="alert-hint">{t.header.checkBackend}</p>
             </div>
           </div>
         )}
@@ -94,7 +104,7 @@ const AppContent: React.FC<{
               className="card-title text-muted"
               style={{ cursor: 'pointer', fontSize: '0.875rem' }}
             >
-              System Status &amp; Architecture Details
+              {t.header.systemStatus}
             </summary>
 
             <div className="mt-4 card-stack">
@@ -199,9 +209,11 @@ function App() {
   }, []);
 
   return (
-    <GameProvider>
-      <AppContent health={health} loading={loading} error={error} />
-    </GameProvider>
+    <LanguageProvider>
+      <GameProvider>
+        <AppContent health={health} loading={loading} error={error} />
+      </GameProvider>
+    </LanguageProvider>
   );
 }
 

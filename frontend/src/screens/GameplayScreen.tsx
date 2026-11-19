@@ -10,6 +10,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useLanguage } from '../context/LanguageContext';
 import { apiClient } from '../api/client';
 import type { NPCSummary, LocationSummary } from '../types/game';
 
@@ -46,6 +47,7 @@ export const GameplayScreen: React.FC = () => {
     loading,
     error,
   } = useGame();
+  const { t, language } = useLanguage();
 
   const [locationNpcs, setLocationNpcs] = useState<NPCSummary[]>([]);
   const giftGoldAmount = 10;
@@ -70,7 +72,7 @@ export const GameplayScreen: React.FC = () => {
     return (
       <div className="container text-center" style={{ margin: '4rem auto' }}>
         <div className="spinner" style={{ margin: '0 auto 1rem auto' }} />
-        <p className="text-secondary">Attuning to mortal vessel...</p>
+        <p className="text-secondary">{language === 'id' ? 'Menyelaraskan jiwa dengan wadah fana...' : 'Attuning to mortal vessel...'}</p>
       </div>
     );
   }
@@ -96,22 +98,22 @@ export const GameplayScreen: React.FC = () => {
               <h1 className="font-display text-gold" style={{ fontSize: '1.75rem' }}>
                 {character.name}
               </h1>
-              <span className="badge badge-gold">Gen {character.generation}</span>
-              <span className="badge badge-teal">{character.race_name}</span>
-              <span className="badge">{character.background_name}</span>
+              <span className="badge badge-gold">{t.common.generation} {character.generation}</span>
+              <span className="badge badge-teal">{t.races[character.race_name]?.name || character.race_name}</span>
+              <span className="badge">{t.backgrounds[character.background_name]?.name || character.background_name}</span>
             </div>
             <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
-              Age {character.age} &bull; Personality: <em>{character.personality_trait}</em>
+              {language === 'id' ? 'Usia' : 'Age'} {character.age} &bull; {language === 'id' ? 'Kepribadian' : 'Personality'}: <em>{character.personality_trait}</em>
             </p>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-gold font-bold" style={{ fontSize: '1.25rem' }}>
-                💰 {currentMoney} Coins
+                💰 {currentMoney} {t.common.gold}
               </div>
               <div className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                Day {timeState?.current_day ?? 1} &bull; {timeState?.current_time_of_day ?? 'morning'}
+                {t.common.day} {timeState?.current_day ?? 1} &bull; {t.timesOfDay[timeState?.current_time_of_day ?? 'morning'] || timeState?.current_time_of_day || 'morning'}
               </div>
             </div>
             <button
@@ -125,9 +127,9 @@ export const GameplayScreen: React.FC = () => {
               }}
               onClick={() => advanceTime(1)}
               disabled={loading}
-              title="Wait for time to pass (1 period)"
+              title={t.gameplay.wait}
             >
-              ⏳ Wait
+              ⏳ {t.gameplay.wait}
             </button>
             <button
               className="btn btn-outline"
@@ -139,9 +141,9 @@ export const GameplayScreen: React.FC = () => {
               }}
               onClick={concludeSession}
               disabled={loading}
-              title="Gracefully retire and view multi-generation chronicles"
+              title={t.gameplay.endSession}
             >
-              📜 Conclude Epoch
+              📜 {t.gameplay.endSession}
             </button>
           </div>
         </div>
@@ -151,7 +153,7 @@ export const GameplayScreen: React.FC = () => {
           <div className="resource-gauge">
             <div className="flex justify-between items-center mb-1">
               <span className="text-muted font-bold" style={{ fontSize: '0.75rem' }}>
-                VITALITY (HP)
+                {t.combat.hp.toUpperCase()}
               </span>
               <span className="text-primary font-bold" style={{ fontSize: '0.875rem' }}>
                 {currentHp} / {maxHp}
@@ -179,7 +181,7 @@ export const GameplayScreen: React.FC = () => {
           <div className="resource-gauge">
             <div className="flex justify-between items-center mb-1">
               <span className="text-muted font-bold" style={{ fontSize: '0.75rem' }}>
-                FATIGUE
+                {language === 'id' ? 'KELELAHAN' : 'FATIGUE'}
               </span>
               <span className="text-primary font-bold" style={{ fontSize: '0.875rem' }}>
                 {fatigueLevel} / 100
@@ -215,31 +217,31 @@ export const GameplayScreen: React.FC = () => {
               className={`nav-tab ${activeTab === 'activities' ? 'nav-tab-active' : ''}`}
               onClick={() => setActiveTab('activities')}
             >
-              Activities
+              {t.gameplay.tabs.activities}
             </button>
             <button
               className={`nav-tab ${activeTab === 'world' ? 'nav-tab-active' : ''}`}
               onClick={() => setActiveTab('world')}
             >
-              World & Travel
+              {t.gameplay.tabs.world}
             </button>
             <button
               className={`nav-tab ${activeTab === 'profile' ? 'nav-tab-active' : ''}`}
               onClick={() => setActiveTab('profile')}
             >
-              Profile & Attributes {character.attribute_points > 0 && `(+${character.attribute_points})`}
+              {t.gameplay.tabs.profile} {character.attribute_points > 0 && `(+${character.attribute_points})`}
             </button>
             <button
               className={`nav-tab ${activeTab === 'npcs' ? 'nav-tab-active' : ''}`}
               onClick={() => setActiveTab('npcs')}
             >
-              NPCs & Society ({locationNpcs.length})
+              {t.gameplay.tabs.npcs} ({locationNpcs.length})
             </button>
             <button
               className={`nav-tab ${activeTab === 'conditions' ? 'nav-tab-active' : ''}`}
               onClick={() => setActiveTab('conditions')}
             >
-              Conditions {conditions.length > 0 && `(${conditions.length})`}
+              {t.gameplay.tabs.conditions} {conditions.length > 0 && `(${conditions.length})`}
             </button>
           </nav>
 
@@ -248,10 +250,10 @@ export const GameplayScreen: React.FC = () => {
             <div>
               <div className="card mb-6" style={{ background: 'var(--color-bg-secondary)' }}>
                 <h3 className="font-display text-gold" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-                  Current Location: {currentLocation?.location?.name || 'Unknown Sanctuary'}
+                  {language === 'id' ? 'Lokasi Saat Ini' : 'Current Location'}: {currentLocation?.location?.name || (language === 'id' ? 'Suaka Tak Dikenal' : 'Unknown Sanctuary')}
                 </h3>
                 <p className="text-secondary" style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
-                  {currentLocation?.location?.description || 'A quiet crossroads in the land of Eldoria.'}
+                  {currentLocation?.location?.description || (language === 'id' ? 'Persimpangan jalan sunyi di tanah Eldoria.' : 'A quiet crossroads in the land of Eldoria.')}
                 </p>
 
                 <div className="flex gap-3" style={{ flexWrap: 'wrap' }}>
@@ -260,7 +262,7 @@ export const GameplayScreen: React.FC = () => {
                     onClick={() => performExplore()}
                     disabled={loading || currentStamina < 15}
                   >
-                    🗺️ Explore Surroundings (-15 STA)
+                    🗺️ {t.gameplay.explore} (-15 STA)
                   </button>
 
                   <button
@@ -273,7 +275,7 @@ export const GameplayScreen: React.FC = () => {
                     onClick={() => performRest('short')}
                     disabled={loading}
                   >
-                    ☕ Short Rest (+STA)
+                    ☕ {t.gameplay.shortRest}
                   </button>
 
                   <button
@@ -286,7 +288,7 @@ export const GameplayScreen: React.FC = () => {
                     onClick={() => performRest('long')}
                     disabled={loading}
                   >
-                    🛌 Long Rest (Full Sleep)
+                    🛌 {t.gameplay.longRest}
                   </button>
 
                   <button
@@ -299,7 +301,7 @@ export const GameplayScreen: React.FC = () => {
                     onClick={() => triggerRandomEvent()}
                     disabled={loading}
                   >
-                    ✨ Seek Destiny (Event)
+                    ✨ {t.gameplay.eventEncounter}
                   </button>
 
                   <button
@@ -312,27 +314,29 @@ export const GameplayScreen: React.FC = () => {
                     onClick={() => startCombatEncounter()}
                     disabled={loading}
                   >
-                    ⚔️ Confront Danger (Combat)
+                    ⚔️ {t.combat.title}
                   </button>
                 </div>
               </div>
 
               {/* Work Opportunities */}
               <h4 className="font-display text-primary mb-3" style={{ fontSize: '1.125rem' }}>
-                Labor & Vocation
+                {language === 'id' ? 'Pekerjaan & Mata Pencaharian' : 'Labor & Vocation'}
               </h4>
               <div className="grid-cards">
                 <div className="action-card">
                   <div>
                     <h5 className="font-display text-gold" style={{ fontSize: '1rem' }}>
-                      Day Labor
+                      {language === 'id' ? 'Buruh Harian' : 'Day Labor'}
                     </h5>
                     <p className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                      Physical hauling and field labor. Builds endurance and earns honest coin.
+                      {language === 'id'
+                        ? 'Bekerja kasar dan mengangkut barang di ladang. Membangun daya tahan dan mendapatkan upah jujur.'
+                        : 'Physical hauling and field labor. Builds endurance and earns honest coin.'}
                     </p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="badge badge-gold">~8-15 Coins</span>
+                    <span className="badge badge-gold">~8-15 {t.common.gold}</span>
                     <button
                       className="btn"
                       style={{
@@ -344,7 +348,7 @@ export const GameplayScreen: React.FC = () => {
                       onClick={() => performWork('day_labor')}
                       disabled={loading || currentStamina < 20}
                     >
-                      Work (-20 STA)
+                      {language === 'id' ? 'Bekerja (-20 STA)' : 'Work (-20 STA)'}
                     </button>
                   </div>
                 </div>
@@ -352,14 +356,16 @@ export const GameplayScreen: React.FC = () => {
                 <div className="action-card">
                   <div>
                     <h5 className="font-display text-gold" style={{ fontSize: '1rem' }}>
-                      Guild Scribe
+                      {language === 'id' ? 'Juru Tulis Serikat' : 'Guild Scribe'}
                     </h5>
                     <p className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                      Copying scrolls and ledger accounting. Sharpens intellect and etiquette.
+                      {language === 'id'
+                        ? 'Menyalin gulungan naskah dan pembukuan kas. Mengasah kecerdasan dan tata krama.'
+                        : 'Copying scrolls and ledger accounting. Sharpens intellect and etiquette.'}
                     </p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="badge badge-gold">~15-25 Coins</span>
+                    <span className="badge badge-gold">~15-25 {t.common.gold}</span>
                     <button
                       className="btn"
                       style={{
@@ -371,7 +377,7 @@ export const GameplayScreen: React.FC = () => {
                       onClick={() => performWork('guild_scribe')}
                       disabled={loading || currentStamina < 15}
                     >
-                      Work (-15 STA)
+                      {language === 'id' ? 'Bekerja (-15 STA)' : 'Work (-15 STA)'}
                     </button>
                   </div>
                 </div>
@@ -379,14 +385,16 @@ export const GameplayScreen: React.FC = () => {
                 <div className="action-card">
                   <div>
                     <h5 className="font-display text-gold" style={{ fontSize: '1rem' }}>
-                      Caravan Guard
+                      {language === 'id' ? 'Pengawal Karavan' : 'Caravan Guard'}
                     </h5>
                     <p className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                      Patrolling trade caravans against marauders. Advances swordsmanship.
+                      {language === 'id'
+                        ? 'Mengawal karavan dagang dari serangan perampok. Memajukan keahlian pedang.'
+                        : 'Patrolling trade caravans against marauders. Advances swordsmanship.'}
                     </p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="badge badge-gold">~20-35 Coins</span>
+                    <span className="badge badge-gold">~20-35 {t.common.gold}</span>
                     <button
                       className="btn"
                       style={{
@@ -398,7 +406,7 @@ export const GameplayScreen: React.FC = () => {
                       onClick={() => performWork('caravan_guard')}
                       disabled={loading || currentStamina < 25}
                     >
-                      Work (-25 STA)
+                      {language === 'id' ? 'Bekerja (-25 STA)' : 'Work (-25 STA)'}
                     </button>
                   </div>
                 </div>
@@ -410,7 +418,7 @@ export const GameplayScreen: React.FC = () => {
           {activeTab === 'world' && (
             <div>
               <h3 className="font-display text-gold mb-4" style={{ fontSize: '1.25rem' }}>
-                Kingdom of Eldoria — Waypoints & Settlements
+                {language === 'id' ? 'Kerajaan Eldoria — Titik Jalur & Pemukiman' : 'Kingdom of Eldoria — Waypoints & Settlements'}
               </h3>
               <div className="grid-cards">
                 {(locations || []).map((loc: LocationSummary) => {
@@ -430,23 +438,23 @@ export const GameplayScreen: React.FC = () => {
                             {loc.name}
                           </h4>
                           <span className={`badge ${loc.danger_level > 2 ? 'badge-crimson' : 'badge-teal'}`}>
-                            Danger {loc.danger_level}/5
+                            {language === 'id' ? 'Bahaya' : 'Danger'} {loc.danger_level}/5
                           </span>
                         </div>
                         <p className="text-muted" style={{ fontSize: '0.8125rem', marginBottom: '0.75rem' }}>
                           {loc.description}
                         </p>
                         <div className="flex gap-2" style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                          {loc.has_market && <span>🛒 Market</span>}
-                          {loc.has_guild && <span>🛡️ Guild</span>}
-                          {loc.has_inn && <span>🍺 Inn</span>}
+                          {loc.has_market && <span>🛒 {language === 'id' ? 'Pasar' : 'Market'}</span>}
+                          {loc.has_guild && <span>🛡️ {language === 'id' ? 'Serikat' : 'Guild'}</span>}
+                          {loc.has_inn && <span>🍺 {language === 'id' ? 'Penginapan' : 'Inn'}</span>}
                         </div>
                       </div>
 
                       <div className="mt-3">
                         {isCurrent ? (
                           <span className="text-gold" style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                            📍 Currently Present
+                            {language === 'id' ? '📍 Berada di Sini' : '📍 Currently Present'}
                           </span>
                         ) : (
                           <button
@@ -455,7 +463,7 @@ export const GameplayScreen: React.FC = () => {
                             onClick={() => travelToLocation(loc.id)}
                             disabled={loading}
                           >
-                            Travel Here (1-2 Periods)
+                            {language === 'id' ? 'Bepergian ke Sini (1-2 Periode)' : 'Travel Here (1-2 Periods)'}
                           </button>
                         )}
                       </div>
@@ -471,10 +479,10 @@ export const GameplayScreen: React.FC = () => {
             <div>
               <div className="card mb-6">
                 <div className="card-header flex justify-between items-center">
-                  <h3 className="card-title">Attributes & Mastery</h3>
+                  <h3 className="card-title">{t.gameplay.attributesTitle}</h3>
                   {character.attribute_points > 0 && (
                     <span className="badge badge-gold" style={{ fontSize: '0.875rem' }}>
-                      {character.attribute_points} Point(s) Available to Allocate
+                      {character.attribute_points} {t.gameplay.pointsAvailable}
                     </span>
                   )}
                 </div>
@@ -495,7 +503,7 @@ export const GameplayScreen: React.FC = () => {
                     >
                       <div>
                         <div className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                          {attr.name}
+                          {t.attributes[attr.name] || attr.name}
                         </div>
                         <div className="text-primary font-bold" style={{ fontSize: '1.25rem' }}>
                           {attr.current_value}
@@ -514,7 +522,7 @@ export const GameplayScreen: React.FC = () => {
                           }}
                           onClick={() => allocateAttributePoint(attr.name, 1)}
                           disabled={loading}
-                          title={`Increase ${attr.name} by 1`}
+                          title={`${t.gameplay.allocatePoint} ${attr.name}`}
                         >
                           +
                         </button>
@@ -527,10 +535,10 @@ export const GameplayScreen: React.FC = () => {
               {/* Skills */}
               <div className="card mb-6">
                 <div className="card-header">
-                  <h3 className="card-title">Developed Skills</h3>
+                  <h3 className="card-title">{t.gameplay.skillsTitle}</h3>
                 </div>
                 {!character.skills || character.skills.length === 0 ? (
-                  <p className="text-muted">No specialized skills developed yet. Perform work or explore to cultivate skills.</p>
+                  <p className="text-muted">{t.gameplay.noSkills}</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
                     {(character.skills || []).map((skill) => (
@@ -561,10 +569,10 @@ export const GameplayScreen: React.FC = () => {
               {/* Inventory */}
               <div className="card">
                 <div className="card-header">
-                  <h3 className="card-title">Inventory</h3>
+                  <h3 className="card-title">{t.gameplay.inventoryTitle}</h3>
                 </div>
                 {!character.inventory || character.inventory.length === 0 ? (
-                  <p className="text-muted">Empty knapsack.</p>
+                  <p className="text-muted">{t.gameplay.emptyKnapsack}</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
                     {(character.inventory || []).map((item) => (
@@ -586,7 +594,7 @@ export const GameplayScreen: React.FC = () => {
                         </p>
                         <div className="flex justify-between items-center">
                           <span className="text-gold" style={{ fontSize: '0.75rem' }}>
-                            Value: {item.value}g
+                            {language === 'id' ? 'Nilai' : 'Value'}: {item.value}g
                           </span>
                           <button
                             className="btn"
@@ -599,7 +607,7 @@ export const GameplayScreen: React.FC = () => {
                             onClick={() => useInventoryItem(item.item_id, 1)}
                             disabled={loading}
                           >
-                            Use
+                            {language === 'id' ? 'Gunakan' : 'Use'}
                           </button>
                         </div>
                       </div>
@@ -614,12 +622,12 @@ export const GameplayScreen: React.FC = () => {
           {activeTab === 'npcs' && (
             <div>
               <h3 className="font-display text-gold mb-3" style={{ fontSize: '1.25rem' }}>
-                Local Inhabitants — {currentLocation?.location?.name}
+                {language === 'id' ? 'Penduduk Setempat' : 'Local Inhabitants'} — {currentLocation?.location?.name}
               </h3>
 
               {npcDialogue && (
                 <div className="alert mb-4" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-accent-gold)' }}>
-                  <p className="text-gold font-bold mb-1">{npcDialogue.npcName} speaks:</p>
+                  <p className="text-gold font-bold mb-1">{npcDialogue.npcName} {language === 'id' ? 'berbicara:' : 'speaks:'}</p>
                   <p className="text-primary" style={{ fontStyle: 'italic', margin: 0 }}>
                     "{npcDialogue.line}"
                   </p>
@@ -627,7 +635,7 @@ export const GameplayScreen: React.FC = () => {
               )}
 
               {!locationNpcs || locationNpcs.length === 0 ? (
-                <p className="text-muted">No notable figures present here at this hour.</p>
+                <p className="text-muted">{t.npcs.noNpcs}</p>
               ) : (
                 <div className="grid-cards">
                   {(locationNpcs || []).map((npc) => (
@@ -643,8 +651,8 @@ export const GameplayScreen: React.FC = () => {
                           {npc.occupation} &bull; {npc.race_name}
                         </div>
                         <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
-                          <span>Affinity: {npc.relationship_value}</span>
-                          <span>Trust: {npc.trust_level}/100</span>
+                          <span>{t.npcs.affinity}: {npc.relationship_value}</span>
+                          <span>{t.npcs.trust}: {npc.trust_level}/100</span>
                         </div>
                       </div>
 
@@ -655,7 +663,7 @@ export const GameplayScreen: React.FC = () => {
                           onClick={() => interactWithNpc(npc.id)}
                           disabled={loading}
                         >
-                          💬 Talk
+                          {t.npcs.talk}
                         </button>
                         <button
                           className="btn"
@@ -668,9 +676,9 @@ export const GameplayScreen: React.FC = () => {
                           }}
                           onClick={() => giftNpc(npc.id, { gold_amount: giftGoldAmount })}
                           disabled={loading || currentMoney < giftGoldAmount}
-                          title={`Gift ${giftGoldAmount} gold`}
+                          title={`${t.npcs.gift} ${giftGoldAmount} ${t.common.gold.toLowerCase()}`}
                         >
-                          🎁 Gift {giftGoldAmount}g
+                          {t.npcs.gift}
                         </button>
                       </div>
                     </div>
@@ -684,11 +692,11 @@ export const GameplayScreen: React.FC = () => {
           {activeTab === 'conditions' && (
             <div>
               <h3 className="font-display text-gold mb-3" style={{ fontSize: '1.25rem' }}>
-                Afflictions, Injuries & Treatments
+                {language === 'id' ? 'Penyakit, Cedera & Pengobatan' : 'Afflictions, Injuries & Treatments'}
               </h3>
               {!conditions || conditions.length === 0 ? (
                 <div className="card text-center text-muted" style={{ padding: '2rem' }}>
-                  🌱 The body is whole and free of mortal afflictions.
+                  {t.conditions.healthy}
                 </div>
               ) : (
                 <div className="card-stack">
@@ -706,9 +714,9 @@ export const GameplayScreen: React.FC = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="badge badge-crimson">Severity {cond.severity}</span>
+                          <span className="badge badge-crimson">{t.conditions.severity} {cond.severity}</span>
                           <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                            {cond.duration_remaining} days left
+                            {cond.duration_remaining} {language === 'id' ? 'hari tersisa' : 'days left'}
                           </div>
                         </div>
                       </div>
@@ -725,19 +733,19 @@ export const GameplayScreen: React.FC = () => {
                           onClick={() => inspectConditionTreatments(cond.id)}
                           disabled={loading}
                         >
-                          Inspect Available Treatments
+                          {language === 'id' ? 'Periksa Pengobatan Tersedia' : 'Inspect Available Treatments'}
                         </button>
                       </div>
 
                       {availableTreatments && availableTreatments.conditionId === cond.id && (
                         <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
                           <h5 className="font-display text-gold mb-2" style={{ fontSize: '0.875rem' }}>
-                            Available Remedies:
+                            {t.conditions.remedies}:
                           </h5>
                           <div className="flex flex-col gap-2">
-                            {(availableTreatments.treatments || []).map((t) => (
+                            {(availableTreatments.treatments || []).map((tr) => (
                               <div
-                                key={t.id}
+                                key={tr.id}
                                 className="flex justify-between items-center"
                                 style={{
                                   background: 'var(--color-bg-secondary)',
@@ -747,10 +755,10 @@ export const GameplayScreen: React.FC = () => {
                               >
                                 <div>
                                   <strong className="text-primary" style={{ fontSize: '0.8125rem' }}>
-                                    {t.name}
+                                    {tr.name}
                                   </strong>
                                   <span className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                                    Cost: {t.cost_money}g
+                                    {t.conditions.cost}: {tr.cost_money}g
                                   </span>
                                 </div>
                                 <button
@@ -761,10 +769,10 @@ export const GameplayScreen: React.FC = () => {
                                     background: 'var(--color-accent-teal)',
                                     color: 'white',
                                   }}
-                                  onClick={() => treatCondition(cond.id, t.id)}
-                                  disabled={loading || currentMoney < t.cost_money}
+                                  onClick={() => treatCondition(cond.id, tr.id)}
+                                  disabled={loading || currentMoney < tr.cost_money}
                                 >
-                                  Apply Treatment
+                                  {t.conditions.applyTreatment}
                                 </button>
                               </div>
                             ))}
@@ -783,12 +791,12 @@ export const GameplayScreen: React.FC = () => {
         <aside>
           <div className="card" style={{ position: 'sticky', top: '1rem' }}>
             <div className="card-header">
-              <h3 className="card-title">Chronicle of Deeds</h3>
+              <h3 className="card-title">{language === 'id' ? 'Kronik Tindakan' : 'Chronicle of Deeds'}</h3>
             </div>
             <div className="narrative-box">
               {!narrativeLogs || narrativeLogs.length === 0 ? (
                 <p className="text-muted" style={{ fontStyle: 'italic', fontSize: '0.8125rem' }}>
-                  The chronicle pages await your deeds...
+                  {language === 'id' ? 'Halaman kronik menanti tindakanmu...' : 'The chronicle pages await your deeds...'}
                 </p>
               ) : (
                 (narrativeLogs || []).map((log, index) => (
@@ -807,7 +815,9 @@ export const GameplayScreen: React.FC = () => {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-dialog">
             <div className="flex justify-between items-center mb-3">
-              <span className="badge badge-gold">{activeEvent.category} Encounter</span>
+              <span className="badge badge-gold">
+                {activeEvent.category} {language === 'id' ? 'Pertemuan' : 'Encounter'}
+              </span>
             </div>
             <h2 className="font-display text-gold mb-3" style={{ fontSize: '1.5rem' }}>
               {activeEvent.title}

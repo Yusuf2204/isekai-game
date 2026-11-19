@@ -8,11 +8,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useLanguage } from '../context/LanguageContext';
 import { apiClient } from '../api/client';
 import type { SessionHistoryItem } from '../types/game';
 
 export const SessionHistoryScreen: React.FC = () => {
   const { continueGame, goToScreen, loading: contextLoading } = useGame();
+  const { t, language } = useLanguage();
   const [sessions, setSessions] = useState<SessionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export const SessionHistoryScreen: React.FC = () => {
         if (isMounted) setSessions(resp.sessions);
       })
       .catch((err) => {
-        if (isMounted) setError(err.message || 'Failed to retrieve chronicles');
+        if (isMounted) setError(err.message || (language === 'id' ? 'Gagal mengambil arsip kronik' : 'Failed to retrieve chronicles'));
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -33,22 +35,22 @@ export const SessionHistoryScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [language]);
 
   return (
     <div className="container" style={{ maxWidth: '800px', margin: '2rem auto' }}>
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="font-display text-gold" style={{ fontSize: '2rem' }}>
-            Archived Chronicles
+            {t.history.title}
           </h1>
           <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-            Past epochs and soul journeys recorded across Eldoria.
+            {t.history.subtitle}
           </p>
         </div>
 
         <button className="btn" style={{ background: 'var(--color-bg-tertiary)' }} onClick={() => goToScreen('main_menu')}>
-          ← Return to Menu
+          ← {t.history.returnMenu}
         </button>
       </div>
 
@@ -61,13 +63,13 @@ export const SessionHistoryScreen: React.FC = () => {
       {loading ? (
         <div className="card text-center text-muted" style={{ padding: '3rem' }}>
           <div className="spinner" style={{ margin: '0 auto 1rem auto' }} />
-          <span>Consulting ancient archives...</span>
+          <span>{language === 'id' ? 'Membuka arsip kuno...' : 'Consulting ancient archives...'}</span>
         </div>
       ) : sessions.length === 0 ? (
         <div className="card text-center text-muted" style={{ padding: '3rem' }}>
-          <p>No past chronicles found. A fresh destiny awaits your first soul.</p>
+          <p>{t.history.noChronicles}</p>
           <button className="btn btn-primary mt-4" onClick={() => goToScreen('character_creation')}>
-            Begin First Journey
+            {t.history.beginFirst}
           </button>
         </div>
       ) : (
@@ -77,16 +79,16 @@ export const SessionHistoryScreen: React.FC = () => {
               <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
                 <div>
                   <h3 className="font-display text-primary" style={{ fontSize: '1.125rem' }}>
-                    Session #{sess.id} &bull; {sess.total_characters} Generation(s)
+                    {t.history.sessionNumber} #{sess.id} &bull; {sess.total_characters} {t.history.generationsCount}
                   </h3>
                   <p className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                    Recorded: {new Date(sess.created_at).toLocaleDateString()}
+                    {t.history.recordedDate}: {new Date(sess.created_at).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US')}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className={`badge ${sess.is_active ? 'badge-teal' : 'badge-gold'}`}>
-                    {sess.is_active ? 'In Progress' : 'Concluded'}
+                    {sess.is_active ? t.history.inProgress : t.history.concluded}
                   </span>
                   {sess.is_active && (
                     <button
@@ -95,7 +97,7 @@ export const SessionHistoryScreen: React.FC = () => {
                       onClick={() => continueGame(sess.session_token)}
                       disabled={contextLoading}
                     >
-                      Resume Life
+                      {t.history.resume}
                     </button>
                   )}
                 </div>
@@ -103,7 +105,7 @@ export const SessionHistoryScreen: React.FC = () => {
 
               {sess.character_names && sess.character_names.length > 0 && (
                 <div className="mt-2 text-secondary" style={{ fontSize: '0.875rem' }}>
-                  <strong>Soul Vessels: </strong> {sess.character_names.join(' → ')}
+                  <strong>{language === 'id' ? 'Wadah Jiwa: ' : 'Soul Vessels: '}</strong> {sess.character_names.join(' → ')}
                 </div>
               )}
             </div>

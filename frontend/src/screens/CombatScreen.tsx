@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { useGame } from '../context/GameContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export const CombatScreen: React.FC = () => {
   const {
@@ -20,13 +21,14 @@ export const CombatScreen: React.FC = () => {
     loading,
     error,
   } = useGame();
+  const { t, language } = useLanguage();
 
   if (!combatState) {
     return (
       <div className="container text-center" style={{ margin: '4rem auto' }}>
-        <p className="text-muted">No battle currently engaged.</p>
+        <p className="text-muted">{t.combat.noBattle}</p>
         <button className="btn btn-primary mt-4" onClick={() => goToScreen('gameplay')}>
-          Return to Exploration
+          {t.combat.returnExploration}
         </button>
       </div>
     );
@@ -47,10 +49,10 @@ export const CombatScreen: React.FC = () => {
     <div className="container combat-container" style={{ margin: '2rem auto' }}>
       <div className="mb-6 text-center">
         <span className="badge badge-crimson" style={{ fontSize: '0.875rem' }}>
-          ⚔️ Turn-Based Combat &bull; Turn {combatState.turn}
+          ⚔️ {t.combat.title} &bull; {t.common.turn} {combatState.turn}
         </span>
         <h1 className="font-display text-gold mt-2" style={{ fontSize: '2rem' }}>
-          Encounter: {enemy.name}
+          {language === 'id' ? 'Pertarungan' : 'Encounter'}: {enemy.name}
         </h1>
         <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
           {enemy.description}
@@ -59,7 +61,7 @@ export const CombatScreen: React.FC = () => {
 
       {error && (
         <div className="alert alert-error mb-4">
-          <p className="alert-title">Combat Error</p>
+          <p className="alert-title">{t.common.error}</p>
           <p className="alert-message">{error}</p>
         </div>
       )}
@@ -72,12 +74,12 @@ export const CombatScreen: React.FC = () => {
             <h3 className="font-display text-crimson" style={{ fontSize: '1.25rem' }}>
               {enemy.name}
             </h3>
-            <span className="badge badge-crimson">Lv. {enemy.level}</span>
+            <span className="badge badge-crimson">{t.common.level} {enemy.level}</span>
           </div>
 
           <div className="mb-3">
             <div className="flex justify-between text-muted mb-1" style={{ fontSize: '0.8125rem' }}>
-              <span>Health (HP)</span>
+              <span>{t.combat.hp}</span>
               <span>
                 {enemy.current_health} / {enemy.max_health}
               </span>
@@ -101,14 +103,14 @@ export const CombatScreen: React.FC = () => {
         <div className="combat-card combat-card-player">
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-display text-gold" style={{ fontSize: '1.25rem' }}>
-              You (Mortal Vessel)
+              {language === 'id' ? 'Kamu (Wadah Fana)' : 'You (Mortal Vessel)'}
             </h3>
-            <span className="badge badge-teal">Lv. {player.level}</span>
+            <span className="badge badge-teal">{t.common.level} {player.level}</span>
           </div>
 
           <div className="mb-3">
             <div className="flex justify-between text-muted mb-1" style={{ fontSize: '0.8125rem' }}>
-              <span>Vitality (HP)</span>
+              <span>{t.combat.hp}</span>
               <span>
                 {player.current_health} / {player.max_health}
               </span>
@@ -141,7 +143,7 @@ export const CombatScreen: React.FC = () => {
       {/* Combat Log */}
       <div className="card mb-6">
         <h4 className="font-display text-muted mb-2" style={{ fontSize: '0.875rem' }}>
-          Combat Chronicle
+          {t.combat.combatChronicle}
         </h4>
         <div className="combat-log-box">
           {(combat_log || []).map((log, index) => (
@@ -156,27 +158,27 @@ export const CombatScreen: React.FC = () => {
       {status === 'victory' && (
         <div className="alert mb-6" style={{ background: 'rgba(74, 139, 92, 0.2)', border: '1px solid var(--color-success)', textAlign: 'center', padding: '1.5rem' }}>
           <h2 className="font-display" style={{ color: 'var(--color-success)', fontSize: '1.75rem', marginBottom: '0.5rem' }}>
-            Victory Achieved!
+            {t.combat.victory}
           </h2>
-          <p className="text-secondary mb-4">The beast has fallen before your blade and resolve.</p>
+          <p className="text-secondary mb-4">{t.combat.victorySubtitle}</p>
           {rewards && (
             <div className="flex justify-center gap-4 mb-4" style={{ flexWrap: 'wrap' }}>
-              <span className="badge badge-gold">+{rewards.character_xp || 0} Character XP</span>
-              <span className="badge badge-gold">+{rewards.money || 0} Gold Coins</span>
+              <span className="badge badge-gold">+{rewards.character_xp || 0} {t.common.xp}</span>
+              <span className="badge badge-gold">+{rewards.money || 0} {t.common.gold}</span>
               {Array.isArray(rewards.loot) && rewards.loot.map((it) => (
                 <span key={it.item_id || it.name} className="badge badge-teal">
-                  Looted: {it.name}
+                  {language === 'id' ? 'Didapat' : 'Looted'}: {it.name}
                 </span>
               ))}
               {Array.isArray(rewards.loot_gained) && rewards.loot_gained.map((itName, idx) => (
                 <span key={idx} className="badge badge-teal">
-                  Looted: {itName}
+                  {language === 'id' ? 'Didapat' : 'Looted'}: {itName}
                 </span>
               ))}
             </div>
           )}
           <button className="btn btn-primary" onClick={handleReturnToGameplay}>
-            Claim Victory & Continue Journey
+            {t.combat.claimVictory}
           </button>
         </div>
       )}
@@ -184,11 +186,11 @@ export const CombatScreen: React.FC = () => {
       {status === 'fled' && (
         <div className="alert mb-6" style={{ background: 'rgba(61, 139, 139, 0.2)', border: '1px solid var(--color-accent-teal)', textAlign: 'center', padding: '1.5rem' }}>
           <h2 className="font-display text-teal" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-            Tactical Retreat Successful
+            {t.combat.fled}
           </h2>
-          <p className="text-secondary mb-4">You evaded the enemy's grasp into the shadows.</p>
+          <p className="text-secondary mb-4">{t.combat.fledSubtitle}</p>
           <button className="btn btn-primary" onClick={handleReturnToGameplay}>
-            Return to Safety
+            {t.combat.returnExploration}
           </button>
         </div>
       )}
@@ -196,7 +198,7 @@ export const CombatScreen: React.FC = () => {
       {status === 'active' && (
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Choose Turn Action</h3>
+            <h3 className="card-title">{language === 'id' ? 'Pilih Tindakan Giliran' : 'Choose Turn Action'}</h3>
           </div>
           <div className="combat-actions-bar">
             <button
@@ -205,7 +207,7 @@ export const CombatScreen: React.FC = () => {
               onClick={() => executeCombatAction('attack')}
               disabled={loading || player.current_stamina < 10}
             >
-              ⚔️ Attack (-10 STA)
+              {t.combat.attack}
             </button>
 
             <button
@@ -221,7 +223,7 @@ export const CombatScreen: React.FC = () => {
               onClick={() => executeCombatAction('defend')}
               disabled={loading}
             >
-              🛡️ Defend (+5 STA, -50% DMG)
+              {t.combat.defend}
             </button>
 
             <button
@@ -237,7 +239,7 @@ export const CombatScreen: React.FC = () => {
               onClick={() => executeCombatAction('use_skill')}
               disabled={loading || player.current_stamina < 15}
             >
-              ⚡ Strike Skill (-15 STA)
+              {t.combat.useSkill}
             </button>
 
             <button
@@ -253,7 +255,7 @@ export const CombatScreen: React.FC = () => {
               onClick={() => executeCombatAction('use_item')}
               disabled={loading}
             >
-              🧪 Use Potion
+              {t.combat.useItem}
             </button>
 
             <button
@@ -269,7 +271,7 @@ export const CombatScreen: React.FC = () => {
               onClick={() => executeCombatAction('flee')}
               disabled={loading}
             >
-              🏃 Flee Battle
+              {t.combat.flee}
             </button>
           </div>
         </div>

@@ -8,11 +8,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
+import { useLanguage } from '../context/LanguageContext';
 import { apiClient } from '../api/client';
 import type { HealthResponse } from '../types/api';
 
 export const MainMenuScreen: React.FC = () => {
   const { sessionToken, startNewGame, continueGame, goToScreen, loading, error } = useGame();
+  const { t } = useLanguage();
   const [health, setHealth] = useState<HealthResponse | null>(null);
 
   useEffect(() => {
@@ -32,16 +34,16 @@ export const MainMenuScreen: React.FC = () => {
     <div className="container" style={{ maxWidth: '640px', margin: '4rem auto', textAlign: 'center' }}>
       <div className="mb-8">
         <h1 className="text-gold font-display" style={{ fontSize: '3rem', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-          Isekai: A Life Unwritten
+          {t.common.title}
         </h1>
         <p className="text-secondary" style={{ fontStyle: 'italic', fontSize: '1.125rem' }}>
-          A single soul transmigrates through generations in the dark kingdom of Eldoria.
+          {t.mainMenu.tagline}
         </p>
       </div>
 
       {error && (
         <div className="alert alert-error text-left mb-6">
-          <p className="alert-title">Notice</p>
+          <p className="alert-title">{t.common.error}</p>
           <p className="alert-message">{error}</p>
         </div>
       )}
@@ -53,7 +55,7 @@ export const MainMenuScreen: React.FC = () => {
           onClick={startNewGame}
           disabled={loading}
         >
-          {loading ? 'Communing with the Void...' : 'Begin New Life'}
+          {loading ? t.mainMenu.communing : t.mainMenu.beginNew}
         </button>
 
         <button
@@ -69,7 +71,7 @@ export const MainMenuScreen: React.FC = () => {
           disabled={!sessionToken || loading}
           title={!sessionToken ? 'No saved active session found' : 'Resume active session'}
         >
-          {sessionToken ? 'Continue Saved Life' : 'Continue (No Saved Game)'}
+          {sessionToken ? t.mainMenu.continueSaved : t.mainMenu.noSaved}
         </button>
 
         <button
@@ -84,17 +86,17 @@ export const MainMenuScreen: React.FC = () => {
           onClick={() => goToScreen('history')}
           disabled={loading}
         >
-          Chronicles of Past Lives (Session History)
+          {t.mainMenu.chronicles}
         </button>
       </div>
 
       <div className="mt-8 text-muted" style={{ fontSize: '0.875rem' }}>
         {health ? (
           <span>
-            Realm Connection: <strong className="text-gold">{health.service}</strong> ({health.status})
+            {t.mainMenu.realmConnection}: <strong className="text-gold">{health.service}</strong> ({health.status})
           </span>
         ) : (
-          <span>Connecting to Eldoria backend...</span>
+          <span>{t.mainMenu.connecting}</span>
         )}
       </div>
     </div>

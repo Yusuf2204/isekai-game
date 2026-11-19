@@ -42,12 +42,14 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const isId = typeof window !== 'undefined' && localStorage.getItem('isekai_language') === 'id';
+
       return (
         <div className="app-layout">
           <header className="app-header">
             <div className="container">
               <div className="app-header-inner">
-                <h1 className="app-title">Isekai: A Life Unwritten</h1>
+                <h1 className="app-title">{isId ? 'Isekai: Takdir Tak Tertulis' : 'Isekai: A Life Unwritten'}</h1>
               </div>
             </div>
           </header>
@@ -56,12 +58,12 @@ export class ErrorBoundary extends Component<Props, State> {
             <section className="app-content">
               <div className="card">
                 <div className="card-header">
-                  <h2 className="card-title text-crimson">Application Error</h2>
+                  <h2 className="card-title text-crimson">{isId ? 'Kesalahan Aplikasi' : 'Application Error'}</h2>
                 </div>
                 <div className="alert alert-error" role="alert">
-                  <p className="alert-title">A fatal error occurred</p>
+                  <p className="alert-title">{isId ? 'Terjadi kesalahan sistem yang tidak terduga' : 'A fatal error occurred'}</p>
                   <p className="alert-message">
-                    {this.state.error?.message || 'An unexpected rendering error occurred.'}
+                    {this.state.error?.message || (isId ? 'Terjadi kesalahan render yang tidak terduga.' : 'An unexpected rendering error occurred.')}
                   </p>
                 </div>
                 <button
@@ -69,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="btn btn-primary"
                   onClick={this.handleReload}
                 >
-                  Reload Application
+                  {isId ? 'Muat Ulang Aplikasi' : 'Reload Application'}
                 </button>
               </div>
             </section>
