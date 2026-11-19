@@ -42,6 +42,17 @@ from app.schemas.events import (
     EventTriggerRequest,
     StatCheckResultSchema,
 )
+from app.schemas.npc import (
+    AllRelationshipsResponse,
+    NPCDetailResponse,
+    NPCGiftRequest,
+    NPCGiftResponse,
+    NPCListResponse,
+    NPCRelationshipSummary,
+    NPCSummarySchema,
+    NPCTalkRequest,
+    NPCTalkResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -76,4 +87,13 @@ __all__ = [
     "EventResolutionResponse",
     "EventTriggerRequest",
     "StatCheckResultSchema",
+    "AllRelationshipsResponse",
+    "NPCDetailResponse",
+    "NPCGiftRequest",
+    "NPCGiftResponse",
+    "NPCListResponse",
+    "NPCRelationshipSummary",
+    "NPCSummarySchema",
+    "NPCTalkRequest",
+    "NPCTalkResponse",
 ]
