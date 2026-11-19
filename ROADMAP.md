@@ -42,8 +42,8 @@
 | Area | Status | Summary |
 |------|--------|---------|
 | Backend foundation | COMPLETED | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers, global error handlers, startup seeding, async Alembic migrations, structured logging, shared constants. |
-| Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment, event system, NPC interaction system, combat system, and death/legacy system. Reincarnation/generations and session summary not implemented. |
-| Incomplete gameplay features (Stage 10) | IN PROGRESS | Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system) & 4 (Death and legacy) COMPLETED / VERIFIED. Increments 5–8 pending approval. |
+| Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment, event system, NPC interaction system, combat system, death/legacy system, and multi-generation reincarnation. Session summary not implemented. |
+| Incomplete gameplay features (Stage 10) | IN PROGRESS | Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system), 4 (Death and legacy) & 5 (Reincarnation / next generation) COMPLETED / VERIFIED. Increments 6–8 pending approval. |
 | Backend reliability and remediation | COMPLETED | Stages 0, 1, 2, 3, 4, 5, 6, 7, 8, and 9 completed and verified. Stage 10 next. |
 | Frontend | PARTIAL | React 18 + TS Vite scaffold, plain CSS styles, API client with error handling, ErrorBoundary, useApiError hook, and health screen. Screens for character creation and gameplay pending Stage 10. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
@@ -435,13 +435,13 @@ statuses for different subtasks.
 
 ### STAGE 10 — Incomplete Gameplay Features
 
-- **Status:** IN PROGRESS (Increments 1, 2, 3 & 4 COMPLETED / VERIFIED; Increments 5–8 pending).
+- **Status:** IN PROGRESS (Increments 1, 2, 3, 4 & 5 COMPLETED / VERIFIED; Increments 6–8 pending).
 - **Increments:**
   1. Event system. (COMPLETED / VERIFIED)
   2. NPC interaction. (COMPLETED / VERIFIED)
   3. Combat system. (COMPLETED / VERIFIED)
   4. Death and legacy. (COMPLETED / VERIFIED)
-  5. Reincarnation / next generation. (PLANNED)
+  5. Reincarnation / next generation. (COMPLETED / VERIFIED)
   6. Session summary. (PLANNED)
   7. Frontend gameplay screens. (PLANNED)
   8. Integration and acceptance testing. (PLANNED)
@@ -515,7 +515,20 @@ statuses for different subtasks.
   - Registered `/api/reincarnation` router in `backend/app/main.py`.
   - Added 11 comprehensive integration tests in `backend/tests/test_stage10_death_and_legacy.py` verifying direct death recording, idempotency, API endpoints, combat defeat integration, event fatality integration, legacy determinism, single-trait constraints, and achievement computation (11/11 passed).
   - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
-  - Finding `IF-04` is partially closed (death, life records, and legacy verified; next-gen reincarnation flow in Increment 5).
+- **Increment 5 (Reincarnation / Next Generation System) Verification Record:**
+  - Implemented authoritative reincarnation engine in `backend/app/services/character/creation.py` and `backend/app/services/reincarnation/death.py` per SPEC §9.3 & §14 Criteria 10, 11, 12.
+  - Resolved session token validation bug (PR-02): empty string or whitespace `session_token` raises `ValidationError` (400/422) and never silently creates a new session. Added `session_token` to `CharacterCreateRequest`.
+  - Reincarnation guard: verified that an active living character prevents reincarnation with 409 `GameStateError`.
+  - Limited legacy inheritance: Generation 2+ characters link to the previous character's `CharacterLegacy` (`legacy_id`), receiving +1 attribute bonus (with max health/stamina recalculation), +1 skill affinity bonus (level increment or new skill grant), +25 inherited starting gold, and narrative personality dreams/fragments.
+  - GameplayState migration: cleanly re-pointed to new character, day reset to 1, combat/events/activities cleared, avoiding unique constraint collisions.
+  - Defined Pydantic schemas in `backend/app/schemas/reincarnation.py` (`ReincarnateRequest`, `ReincarnationStatusResponse`, `ReincarnationResponse`).
+  - Implemented FastAPI endpoints:
+    - `GET /api/reincarnation/status` — check reincarnation eligibility, living/deceased character IDs, and available legacy preview
+    - `POST /api/reincarnation/reincarnate` — reincarnate into next generation with fresh identity and inherited legacy
+    - `POST /api/character/create` (with `session_token`) — seamless next-generation character creation path
+  - Added 8 comprehensive integration tests in `backend/tests/test_stage10_reincarnation_system.py` verifying PR-02, living guard, Gen 2 creation, legacy perk applications, and multi-generation lifecycle across 3 lives (8/8 passed).
+  - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Findings `PR-02`, `CharacterCreateRequest has no session token path for generations`, and `IF-04` are CLOSED.
 
 ---
 
@@ -541,8 +554,8 @@ statuses for different subtasks.
 - **Stage 7 — Application Startup and World Seeding:** COMPLETED / VERIFIED.
 - **Stage 8 — Frontend Foundation:** COMPLETED / VERIFIED.
 - **Stage 9 — Documentation and Infrastructure:** COMPLETED / VERIFIED.
-- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system), and 4 (Death and legacy) COMPLETED / VERIFIED; Increment 5 (Reincarnation / next generation) is next.
-- **All remediation stages (0 through 9) and Stage 10 Increments 1, 2, 3, and 4 are completed and verified.**
+- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system), 4 (Death and legacy), and 5 (Reincarnation / next generation) COMPLETED / VERIFIED; Increment 6 (Session summary) is next.
+- **All remediation stages (0 through 9) and Stage 10 Increments 1, 2, 3, 4, and 5 are completed and verified.**
 
 ---
 
@@ -606,12 +619,12 @@ statuses for different subtasks.
 | DI-04 | AGENTS §4 pool settings do not match SQLite implementation. | Stage 9 | CLOSED — Documented SQLite connection behavior with aiosqlite (NullPool/file lock) in database.py & README |
 | DI-05 | `package.json` uses caret ranges, violating exact pinning. | Stage 9 | CLOSED — Exact pinned all dependencies in frontend/package.json without caret ranges |
 | DI-06 | `structlog` is required by AGENTS but absent from requirements. | Stage 9 | CLOSED — Implemented structured logging in app.core.logging adhering to standard library constraints in AGENTS.md §7 |
-| PR-02 | Empty `session_token` silently creates a new session. | Stage 10 | OPEN |
+| PR-02 | Empty `session_token` silently creates a new session. | Stage 10 | CLOSED — Empty or whitespace session_token raises ValidationError and never silently creates a new session |
 | PR-05 | Caret dependency ranges allow drift. | Stage 9 | CLOSED — Exact pinned all dependencies in frontend/package.json without caret ranges |
 | PR-09 | No frontend error boundary / API error hook. | Stage 8 | CLOSED — Implemented ErrorBoundary component, useApiError hook, and visual error states |
 | PR-10 | RNG seed fallback (`rng_seed or session_id`) semantics are ambiguous. | Stage 4 | CLOSED — Explicit rng_seed if rng_seed is not None else ... fallback allows 0 as valid seed |
 | PR-11 | Legacy tests may share state / depend on ordering. | Stage 2 gate / ongoing | CLOSED — `test_activities_api.py`, `test_skill_progression.py`, `test_time_api.py`, and `test_character_progression.py` now pass standalone; full suite passes. |
-| — | `CharacterCreateRequest` has no session token path for generations. | Stage 10 | OPEN |
+| — | `CharacterCreateRequest` has no session token path for generations. | Stage 10 | CLOSED — Added session_token to CharacterCreateRequest and wired into create_character |
 | — | Missing tests for inventory/treatment/determinism/frontend. | Ongoing | OPEN |
 | TD-01 | `ruff check app tests` reports 22 pre-existing errors outside Stage 1 scope (unused imports, f-strings, undefined `TREATMENTS`, unused variable). | Stage 9 quality gate | CLOSED — Ruff check passes 0 errors across entire repository (69 files) |
 | TD-02 | `ruff format --check app tests` reports 5 pre-existing files that would be reformatted. | Stage 9 quality gate | CLOSED — Ruff format check passes with all 69 files cleanly formatted |
@@ -624,7 +637,7 @@ statuses for different subtasks.
 | IF-01 | Event system (20–30 events, choices, consequences). | Stage 10 | CLOSED — 24 predefined events, deterministic stat checks, consequence application, and active event lifecycle verified |
 | IF-02 | NPC profiles, dialogue, relationships, memory flags. | Stage 10 | CLOSED — 13 NPCs across 7 locations, dynamic dialogue, gifting, relationship tiers, and memory flags verified |
 | IF-03 | Combat system (3–5 enemy types, turn-based actions). | Stage 10 | CLOSED — lightweight turn-based combat engine, initiative, 5 actions, 5 enemies, rewards, and fatalities verified |
-| IF-04 | Death, life record, legacy, reincarnation. | Stage 10 | PARTIAL — Death recording, complete soul records (LifeRecord), and legacy generation verified (Increment 4); reincarnation/next-generation flow next (Increment 5) |
+| IF-04 | Death, life record, legacy, reincarnation. | Stage 10 | CLOSED — Death recording, complete soul records (LifeRecord), limited legacy generation, and multi-generation reincarnation (at least 2 generations) verified |
 | IF-05 | Session summary and session history. | Stage 10 | OPEN |
 | IF-06 | Frontend screens: Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary. | Stages 8/10 | OPEN |
 | IF-07 | Missing test coverage (inventory, treatment, determinism, frontend). | Ongoing | OPEN |
@@ -650,15 +663,16 @@ has not been closed by a verified remediation stage.
   the Stage 7 startup-seeding test file (`backend/tests/test_stage7_startup_seeding.py`),
   the Stage 10 event system test file (`backend/tests/test_stage10_event_system.py`),
   the Stage 10 NPC system test file (`backend/tests/test_stage10_npc_system.py`),
-  the Stage 10 combat system test file (`backend/tests/test_stage10_combat_system.py`), and
-  the Stage 10 death and legacy test file (`backend/tests/test_stage10_death_and_legacy.py`) —
-  24 files total under `backend/tests/`.
+  the Stage 10 combat system test file (`backend/tests/test_stage10_combat_system.py`),
+  the Stage 10 death and legacy test file (`backend/tests/test_stage10_death_and_legacy.py`), and
+  the Stage 10 reincarnation test file (`backend/tests/test_stage10_reincarnation_system.py`) —
+  25 files total under `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
-- **Ruff check:** 0 errors across entire repository (all 88 files clean).
-- **Ruff format check:** 88 files already cleanly formatted.
-- **Full test suite:** `pytest tests/ -q` — **369 passed**, 347 warnings in 166.35s
-  (2026-11-19, after Stage 10 Increment 4 completion).
+- **Ruff check:** 0 errors across entire repository (all 89 files clean).
+- **Ruff format check:** 89 files already cleanly formatted.
+- **Full test suite:** `pytest tests/ -q` — **377 passed**, 355 warnings in 170.10s
+  (2026-11-19, after Stage 10 Increment 5 completion).
 - **Frontend test suite:** `npm test --prefix frontend` — **9 passed**
   (2026-11-19, after Stage 9 completion).
 - **Frontend build & lint:** `npm run build` succeeds (Vite bundle); `npm run lint` 0 errors.
@@ -738,3 +752,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-19 | Stage 10 Increment 2 completed: implemented NPC system with 13 canonical NPCs across all 7 explorable locations in Eldoria in app.services.npc.definitions (IF-02); established NPC schemas in app.schemas.npc; created authoritative domain service in app.services.npc.service with dynamic dialogue, greetings, topic tracking, memory flags, gold and item gifting, relationship tiers, and bounds enforcement (-100 to 100); registered /api/npc API router in app.main; added 17 comprehensive integration tests in test_stage10_npc_system.py (17/17 passed); 0 Ruff errors across 78 files; verified full backend test suite (345 passed); preserved dev DB hash. Closed IF-02. |
 | 2026-11-19 | Stage 10 Increment 3 completed: implemented turn-based combat system with initiative roll (Agility + 1d20), 5 turn actions (attack, defend, use_skill, use_item, flee), 5 canonical enemies, combat rewards, combat fatalities, active encounter persistence with flag_modified, /api/combat router, 13 integration tests in test_stage10_combat_system.py (13/13 passed), full backend test suite (358 passed), 0 Ruff errors across 82 files, preserved dev DB hash. Closed IF-03. |
 | 2026-11-19 | Stage 10 Increment 4 completed: implemented death and legacy system with authoritative death recording in app.services.reincarnation.death, complete soul records (LifeRecord) with dynamic achievements, deterministic legacy generation (CharacterLegacy) with single-trait constraint (AGENTS.md §14), idempotency, combat defeat and event fatality automatic triggers, /api/reincarnation router, 11 integration tests in test_stage10_death_and_legacy.py (11/11 passed), full backend test suite (369 passed), 0 Ruff errors across 88 files, preserved dev DB hash. Partially closed IF-04. |
+| 2026-11-19 | Stage 10 Increment 5 completed: implemented multi-generation reincarnation system with session token validation (PR-02), living character reincarnation guards (409 GameStateError), limited legacy perk inheritance (attribute, skill, money, dreams), GameplayState session migration, GET /api/reincarnation/status, POST /api/reincarnation/reincarnate, 8 integration tests in test_stage10_reincarnation_system.py (8/8 passed), full backend test suite (377 passed), 0 Ruff errors across 89 files, preserved dev DB hash. Closed PR-02 and IF-04. |

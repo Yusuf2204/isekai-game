@@ -67,6 +67,9 @@ from app.schemas.reincarnation import (
     DeathSummaryResponse,
     LifeRecordListResponse,
     LifeRecordResponse,
+    ReincarnateRequest,
+    ReincarnationResponse,
+    ReincarnationStatusResponse,
 )
 
 __all__ = [
@@ -122,4 +125,7 @@ __all__ = [
     "DeathSummaryResponse",
     "LifeRecordListResponse",
     "LifeRecordResponse",
+    "ReincarnateRequest",
+    "ReincarnationResponse",
+    "ReincarnationStatusResponse",
 ]

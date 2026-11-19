@@ -5,6 +5,7 @@ from app.services.reincarnation.death import (
     generate_character_legacy,
     get_legacy_by_character,
     get_life_record_by_character,
+    get_reincarnation_status,
     get_session_life_records,
     record_death,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "generate_character_legacy",
     "get_legacy_by_character",
     "get_life_record_by_character",
+    "get_reincarnation_status",
     "get_session_life_records",
     "record_death",
 ]

@@ -54,6 +54,7 @@ async def create_character_endpoint(
         background_name=request.background_name,
         gender_presentation=request.gender_presentation,
         starting_location_id=request.starting_location_id,
+        session_token=request.session_token,
     )
 
     # Reload character with all relationships
@@ -124,6 +125,7 @@ def _build_character_response(character: Character) -> CharacterResponse:
         personality_trait=character.personality_trait,
         personality_description=character.personality_description,
         starting_location_id=character.starting_location_id,
+        legacy_id=character.legacy_id,
         is_alive=character.is_alive,
         current_health=character.current_health,
         max_health=character.max_health,

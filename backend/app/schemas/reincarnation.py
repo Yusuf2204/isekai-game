@@ -12,6 +12,7 @@ from app.models.enums import (
     LegacyType,
     RaceName,
 )
+from app.schemas.character import CharacterResponse
 
 
 class DeathRecordRequest(BaseModel):
@@ -88,3 +89,41 @@ class LifeRecordListResponse(BaseModel):
     session_token: str
     total_records: int
     records: list[LifeRecordResponse]
+
+
+class ReincarnateRequest(BaseModel):
+    """Request payload to reincarnate a soul into the next life."""
+
+    session_token: str = Field(..., description="Active session token")
+    name: str = Field(
+        ..., min_length=1, max_length=100, description="New character name"
+    )
+    race_name: RaceName = Field(..., description="New character race")
+    background_name: BackgroundName = Field(..., description="New character background")
+    gender_presentation: GenderPresentation = Field(
+        ..., description="New gender presentation"
+    )
+    starting_location_id: int | None = Field(
+        default=None, description="Starting location ID (optional)"
+    )
+
+
+class ReincarnationStatusResponse(BaseModel):
+    """Status indicating whether a session is ready for reincarnation."""
+
+    session_token: str
+    current_generation: int
+    can_reincarnate: bool
+    living_character_id: int | None = None
+    deceased_character_id: int | None = None
+    available_legacy: CharacterLegacyResponse | None = None
+
+
+class ReincarnationResponse(BaseModel):
+    """Response returned upon successfully reincarnating into a new generation."""
+
+    message: str
+    character: CharacterResponse
+    inherited_legacy: CharacterLegacyResponse | None = None
+    session_token: str
+    generation: int

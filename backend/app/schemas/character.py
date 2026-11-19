@@ -17,6 +17,10 @@ class CharacterCreateRequest(BaseModel):
         default=None,
         description="Starting location ID (optional, will be auto-assigned if not provided)",
     )
+    session_token: str | None = Field(
+        default=None,
+        description="Optional session token for reincarnation into next generation",
+    )
 
 
 class CharacterAttributeResponse(BaseModel):
@@ -63,6 +67,7 @@ class CharacterResponse(BaseModel):
     personality_trait: str
     personality_description: str
     starting_location_id: int | None
+    legacy_id: int | None = None
     is_alive: bool
     current_health: int
     max_health: int

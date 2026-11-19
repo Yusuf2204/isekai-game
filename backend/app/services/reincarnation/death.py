@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.core.rng import SeededRNG
 from app.models.enums import DeathCause, LegacyType
 from app.models.gameplay import (
@@ -373,3 +373,64 @@ async def get_session_life_records(
         .order_by(LifeRecord.generation.asc())
     )
     return list(result.scalars().all())
+
+
+async def get_reincarnation_status(session: AsyncSession, session_token: str) -> dict:
+    """Inspect whether a session is ready for reincarnation and get available legacy."""
+    token = session_token.strip() if session_token else ""
+    if not token:
+        raise ValidationError(
+            "Session token cannot be empty or blank",
+            details={"session_token": session_token},
+        )
+    session_res = await session.execute(
+        select(GameSession).where(GameSession.session_token == token)
+    )
+    game_session = session_res.scalar_one_or_none()
+    if game_session is None:
+        raise NotFoundError("GameSession", session_token)
+    if not game_session.is_active:
+        raise ValidationError(
+            "Game session has ended", details={"session_token": session_token}
+        )
+
+    # Check living character
+    living_res = await session.execute(
+        select(Character).where(
+            Character.session_id == game_session.id,
+            Character.is_alive.is_(True),
+        )
+    )
+    living_char = living_res.scalar_one_or_none()
+
+    # Find most recent character
+    latest_char_res = await session.execute(
+        select(Character)
+        .where(Character.session_id == game_session.id)
+        .order_by(Character.generation.desc())
+    )
+    latest_char = latest_char_res.scalars().first()
+
+    available_legacy = None
+    deceased_char_id = None
+    if latest_char is not None and not latest_char.is_alive:
+        deceased_char_id = latest_char.id
+        legacy_res = await session.execute(
+            select(CharacterLegacy).where(
+                CharacterLegacy.character_id == latest_char.id
+            )
+        )
+        available_legacy = legacy_res.scalar_one_or_none()
+
+    can_reincarnate = (living_char is None) and (
+        latest_char is not None and not latest_char.is_alive
+    )
+
+    return {
+        "session_token": session_token,
+        "current_generation": game_session.current_generation,
+        "can_reincarnate": can_reincarnate,
+        "living_character_id": living_char.id if living_char else None,
+        "deceased_character_id": deceased_char_id,
+        "available_legacy": available_legacy,
+    }

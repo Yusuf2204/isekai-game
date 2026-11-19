@@ -1,20 +1,29 @@
 """Reincarnation and death API router."""
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.api.character import _build_character_response
 from app.core.database import get_db_session
 from app.core.exceptions import NotFoundError
+from app.models.gameplay import Character
 from app.schemas.reincarnation import (
     CharacterLegacyResponse,
     DeathRecordRequest,
     DeathSummaryResponse,
     LifeRecordListResponse,
     LifeRecordResponse,
+    ReincarnateRequest,
+    ReincarnationResponse,
+    ReincarnationStatusResponse,
 )
+from app.services.character.creation import create_character
 from app.services.reincarnation.death import (
     get_legacy_by_character,
     get_life_record_by_character,
+    get_reincarnation_status,
     get_session_life_records,
     record_death,
 )
@@ -100,4 +109,84 @@ async def get_session_records(
         session_token=session_token,
         total_records=len(records),
         records=[LifeRecordResponse.model_validate(r) for r in records],
+    )
+
+
+@router.get(
+    "/status",
+    response_model=ReincarnationStatusResponse,
+    summary="Check reincarnation eligibility and available legacy",
+)
+async def get_status_endpoint(
+    session_token: str = Query(..., description="Active session token"),
+    session: AsyncSession = Depends(get_db_session),
+) -> ReincarnationStatusResponse:
+    """Check if the current session can reincarnate and view the available legacy from the previous life."""
+    status_data = await get_reincarnation_status(session, session_token)
+    available_leg = status_data.get("available_legacy")
+    return ReincarnationStatusResponse(
+        session_token=status_data["session_token"],
+        current_generation=status_data["current_generation"],
+        can_reincarnate=status_data["can_reincarnate"],
+        living_character_id=status_data["living_character_id"],
+        deceased_character_id=status_data["deceased_character_id"],
+        available_legacy=(
+            CharacterLegacyResponse.model_validate(available_leg)
+            if available_leg
+            else None
+        ),
+    )
+
+
+@router.post(
+    "/reincarnate",
+    response_model=ReincarnationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Reincarnate deceased soul into next generation",
+)
+async def reincarnate_character(
+    request: ReincarnateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ReincarnationResponse:
+    """
+    Reincarnate a deceased character into the next generation.
+
+    The new character inherits a limited legacy from the previous life per SPEC §9.3
+    and AGENTS.md §14, with fresh identity, background, starting location, and attributes.
+    """
+    character, game_session = await create_character(
+        session=session,
+        name=request.name,
+        race_name=request.race_name,
+        background_name=request.background_name,
+        gender_presentation=request.gender_presentation,
+        starting_location_id=request.starting_location_id,
+        session_token=request.session_token,
+    )
+
+    # Reload character with all relations
+    result = await session.execute(
+        select(Character)
+        .options(
+            selectinload(Character.attributes),
+            selectinload(Character.skills),
+            selectinload(Character.inventory),
+            selectinload(Character.inherited_legacy),
+        )
+        .where(Character.id == character.id)
+    )
+    loaded_char = result.scalar_one()
+
+    inherited_legacy_res = (
+        CharacterLegacyResponse.model_validate(loaded_char.inherited_legacy)
+        if loaded_char.inherited_legacy
+        else None
+    )
+
+    return ReincarnationResponse(
+        message=f"Reincarnated successfully into Generation {loaded_char.generation}.",
+        character=_build_character_response(loaded_char),
+        inherited_legacy=inherited_legacy_res,
+        session_token=game_session.session_token,
+        generation=loaded_char.generation,
     )
