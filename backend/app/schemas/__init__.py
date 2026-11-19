@@ -53,6 +53,14 @@ from app.schemas.npc import (
     NPCTalkRequest,
     NPCTalkResponse,
 )
+from app.schemas.combat import (
+    CombatActionRequest,
+    CombatActionResponse,
+    CombatEnemySchema,
+    CombatPlayerStatusSchema,
+    CombatStartRequest,
+    CombatStateResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -96,4 +104,10 @@ __all__ = [
     "NPCSummarySchema",
     "NPCTalkRequest",
     "NPCTalkResponse",
+    "CombatActionRequest",
+    "CombatActionResponse",
+    "CombatEnemySchema",
+    "CombatPlayerStatusSchema",
+    "CombatStartRequest",
+    "CombatStateResponse",
 ]

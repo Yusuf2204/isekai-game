@@ -42,8 +42,8 @@
 | Area | Status | Summary |
 |------|--------|---------|
 | Backend foundation | COMPLETED | FastAPI app, async SQLAlchemy engine/session, models, schemas, config, routers, global error handlers, startup seeding, async Alembic migrations, structured logging, shared constants. |
-| Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment, event system, and NPC interaction system. Combat, death/legacy, reincarnation, session summary not implemented. |
-| Incomplete gameplay features (Stage 10) | IN PROGRESS | Increments 1 (Event system) & 2 (NPC interaction) COMPLETED / VERIFIED. Increments 3–8 pending approval. |
+| Core gameplay systems | PARTIAL | Character creation, progression, resources, conditions, time, world locations, activities, inventory/treatment, event system, NPC interaction system, and combat system. Death/legacy, reincarnation, session summary not implemented. |
+| Incomplete gameplay features (Stage 10) | IN PROGRESS | Increments 1 (Event system), 2 (NPC interaction) & 3 (Combat system) COMPLETED / VERIFIED. Increments 4–8 pending approval. |
 | Backend reliability and remediation | COMPLETED | Stages 0, 1, 2, 3, 4, 5, 6, 7, 8, and 9 completed and verified. Stage 10 next. |
 | Frontend | PARTIAL | React 18 + TS Vite scaffold, plain CSS styles, API client with error handling, ErrorBoundary, useApiError hook, and health screen. Screens for character creation and gameplay pending Stage 10. |
 | Gameplay completeness | PARTIAL | No complete end-to-end gameplay loop yet (no events, combat, death, reincarnation, or session summary). |
@@ -435,11 +435,11 @@ statuses for different subtasks.
 
 ### STAGE 10 — Incomplete Gameplay Features
 
-- **Status:** IN PROGRESS (Increments 1 & 2 COMPLETED / VERIFIED; Increments 3–8 pending).
+- **Status:** IN PROGRESS (Increments 1, 2 & 3 COMPLETED / VERIFIED; Increments 4–8 pending).
 - **Increments:**
   1. Event system. (COMPLETED / VERIFIED)
   2. NPC interaction. (COMPLETED / VERIFIED)
-  3. Combat system. (PLANNED)
+  3. Combat system. (COMPLETED / VERIFIED)
   4. Death and legacy. (PLANNED)
   5. Reincarnation / next generation. (PLANNED)
   6. Session summary. (PLANNED)
@@ -479,6 +479,27 @@ statuses for different subtasks.
   - Added 17 comprehensive integration tests in `backend/tests/test_stage10_npc_system.py` verifying catalog integrity, location querying, detailed profiles, dialogue interactions, gift processing, relationship tiers, and deceased character guards (17/17 passed).
   - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
   - Finding `IF-02` is closed.
+- **Increment 3 (Combat System) Verification Record:**
+  - Implemented lightweight turn-based combat engine in `backend/app/services/combat/service.py` covering all 5 canonical enemy types (Slime, Goblin, Dire Wolf, Skeleton, Corrupted Beast) per SPEC §8 & §13.
+  - Implemented initiative rolling system based on `Agility + 1d20` (`SeededRNG`) per AGENTS.md §14 Recommendation 5.
+  - Implemented 5 turn actions:
+    - `attack`: stamina-dependent physical/magical strikes, critical strike on roll 20 (1.5x damage), enemy counter-attack.
+    - `defend`: defensive stance reducing incoming damage by 50% and recovering 5 stamina.
+    - `use_skill`: amplified special technique costing 15 stamina.
+    - `use_item`: consumes healing potions or consumables from inventory to restore HP.
+    - `flee`: escape check (`player_agi + 1d20 >= enemy_agi + 10`), ending combat on success or suffering enemy attack on failure.
+  - Authoritative persistence in `GameplayState.in_combat`, `combat_enemy_id`, and `combat_state` with `flag_modified` ensuring session survival across refreshes.
+  - Victory resolution: awards level XP, swordsmanship skill XP, gold, and rolled loot from `possible_loot`.
+  - Fatality handling: health reduction to 0 triggers `DeathCause.COMBAT`, marks character dead (`is_alive=False`), records `died_at`, `age_at_death`, and combat obituary.
+  - Defined Pydantic schemas in `backend/app/schemas/combat.py` (`CombatEnemySchema`, `CombatPlayerStatusSchema`, `CombatStartRequest`, `CombatStateResponse`, `CombatActionRequest`, `CombatActionResponse`).
+  - Implemented FastAPI router in `backend/app/api/combat.py` with 3 endpoints:
+    - `POST /api/combat/start` — initiate combat or resume active encounter
+    - `GET /api/combat/state` — inspect active combat status
+    - `POST /api/combat/action` — execute turn action (attack, defend, use_skill, use_item, flee)
+  - Registered `/api/combat` router in `backend/app/main.py`.
+  - Added 13 comprehensive integration tests in `backend/tests/test_stage10_combat_system.py` verifying combat initialization, initiative, actions, victory rewards, combat fatalities, and deceased guards (13/13 passed).
+  - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Finding `IF-03` is closed.
 
 ---
 
@@ -504,8 +525,8 @@ statuses for different subtasks.
 - **Stage 7 — Application Startup and World Seeding:** COMPLETED / VERIFIED.
 - **Stage 8 — Frontend Foundation:** COMPLETED / VERIFIED.
 - **Stage 9 — Documentation and Infrastructure:** COMPLETED / VERIFIED.
-- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system) & 2 (NPC interaction) COMPLETED / VERIFIED; Increment 3 (Combat system) is next.
-- **All remediation stages (0 through 9) and Stage 10 Increments 1 and 2 are completed and verified.**
+- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system), 2 (NPC interaction), and 3 (Combat system) COMPLETED / VERIFIED; Increment 4 (Death and legacy) is next.
+- **All remediation stages (0 through 9) and Stage 10 Increments 1, 2, and 3 are completed and verified.**
 
 ---
 
@@ -586,7 +607,7 @@ statuses for different subtasks.
 |----|---------|-------------|--------|
 | IF-01 | Event system (20–30 events, choices, consequences). | Stage 10 | CLOSED — 24 predefined events, deterministic stat checks, consequence application, and active event lifecycle verified |
 | IF-02 | NPC profiles, dialogue, relationships, memory flags. | Stage 10 | CLOSED — 13 NPCs across 7 locations, dynamic dialogue, gifting, relationship tiers, and memory flags verified |
-| IF-03 | Combat system (3–5 enemy types, turn-based actions). | Stage 10 | OPEN |
+| IF-03 | Combat system (3–5 enemy types, turn-based actions). | Stage 10 | CLOSED — lightweight turn-based combat engine, initiative, 5 actions, 5 enemies, rewards, and fatalities verified |
 | IF-04 | Death, life record, legacy, reincarnation. | Stage 10 | OPEN |
 | IF-05 | Session summary and session history. | Stage 10 | OPEN |
 | IF-06 | Frontend screens: Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary. | Stages 8/10 | OPEN |
@@ -611,15 +632,16 @@ has not been closed by a verified remediation stage.
   the Stage 5 inventory-consolidation test file (`backend/tests/test_stage5_inventory_consolidation.py`),
   the Stage 6 exception-handling test file (`backend/tests/test_stage6_exception_handling.py`),
   the Stage 7 startup-seeding test file (`backend/tests/test_stage7_startup_seeding.py`),
-  the Stage 10 event system test file (`backend/tests/test_stage10_event_system.py`), and
-  the Stage 10 NPC system test file (`backend/tests/test_stage10_npc_system.py`) —
-  22 files total under `backend/tests/`.
+  the Stage 10 event system test file (`backend/tests/test_stage10_event_system.py`),
+  the Stage 10 NPC system test file (`backend/tests/test_stage10_npc_system.py`), and
+  the Stage 10 combat system test file (`backend/tests/test_stage10_combat_system.py`) —
+  23 files total under `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
-- **Ruff check:** 0 errors across entire repository (all 78 files clean).
-- **Ruff format check:** 78 files already cleanly formatted.
-- **Full test suite:** `pytest tests/ -q` — **345 passed**, 323 warnings in 146.93s
-  (2026-11-19, after Stage 10 Increment 2 completion).
+- **Ruff check:** 0 errors across entire repository (all 82 files clean).
+- **Ruff format check:** 82 files already cleanly formatted.
+- **Full test suite:** `pytest tests/ -q` — **358 passed**, 336 warnings in 149.70s
+  (2026-11-19, after Stage 10 Increment 3 completion).
 - **Frontend test suite:** `npm test --prefix frontend` — **9 passed**
   (2026-11-19, after Stage 9 completion).
 - **Frontend build & lint:** `npm run build` succeeds (Vite bundle); `npm run lint` 0 errors.
@@ -697,3 +719,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-19 | Stage 9 completed: updated README.md with comprehensive endpoint list, ports, and architecture notes (DI-01, DI-02); documented SQLite aiosqlite connection pool behavior (DI-04); pinned exact dependencies in frontend/package.json without caret ranges (DI-05, PR-05); initialized and configured Alembic async migration environment (PR-07, IF-08); implemented structured logging in app.core.logging with JSONFormatter option (DI-06, PR-08); created shared constants in backend/app/core/constants.py and frontend/src/constants.ts (IF-09); verified ruff check (0 errors across 69 files) and ruff format (69 files clean) (TD-01, TD-02); preserved dev DB hash; verified backend (314 passed) and frontend (9 passed) test suites. Closed DI-01, DI-02, DI-04, DI-05, DI-06, PR-05, PR-07, PR-08, TD-01, TD-02, IF-08, IF-09. |
 | 2026-11-19 | Stage 10 Increment 1 completed: implemented event system with 24 predefined event definitions spanning all 10 EventCategory types in app.services.events.definitions (IF-01); established event schemas in app.schemas.events; created authoritative domain service in app.services.events.service with deterministic stat checks, consequence execution (health, stamina, money, skills, attributes, conditions), death handling with DeathCause.EVENT_CONSEQUENCES, and active event lifecycle; registered /api/events API router in app.main; added 14 comprehensive tests in test_stage10_event_system.py (14/14 passed); 0 Ruff errors across 73 files; verified full backend test suite (328 passed); preserved dev DB hash. Closed IF-01. |
 | 2026-11-19 | Stage 10 Increment 2 completed: implemented NPC system with 13 canonical NPCs across all 7 explorable locations in Eldoria in app.services.npc.definitions (IF-02); established NPC schemas in app.schemas.npc; created authoritative domain service in app.services.npc.service with dynamic dialogue, greetings, topic tracking, memory flags, gold and item gifting, relationship tiers, and bounds enforcement (-100 to 100); registered /api/npc API router in app.main; added 17 comprehensive integration tests in test_stage10_npc_system.py (17/17 passed); 0 Ruff errors across 78 files; verified full backend test suite (345 passed); preserved dev DB hash. Closed IF-02. |
+| 2026-11-19 | Stage 10 Increment 3 completed: implemented turn-based combat system with initiative roll (Agility + 1d20), 5 turn actions (attack, defend, use_skill, use_item, flee), 5 canonical enemies, combat rewards, combat fatalities, active encounter persistence with flag_modified, /api/combat router, 13 integration tests in test_stage10_combat_system.py (13/13 passed), full backend test suite (358 passed), 0 Ruff errors across 82 files, preserved dev DB hash. Closed IF-03. |
