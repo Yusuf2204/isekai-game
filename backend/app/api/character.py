@@ -8,16 +8,19 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db_session
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.gameplay import Character
+from app.models.world import Background, Race
 from app.schemas.character import (
     AttributeAllocateRequest,
     AttributeAllocateResponse,
     AttributePointsResponse,
+    BackgroundSummaryResponse,
     CharacterAttributeResponse,
     CharacterCreateRequest,
     CharacterCreateResponse,
     CharacterInventoryItemResponse,
     CharacterResponse,
     CharacterSkillResponse,
+    RaceSummaryResponse,
     ResourceStatusResponse,
     UnifiedProgressionStatusResponse,
 )
@@ -232,3 +235,77 @@ async def get_resource_status_endpoint(
     result = await get_resource_status(character)
 
     return ResourceStatusResponse(**result)
+
+
+@router.get("/races", response_model=list[RaceSummaryResponse])
+async def list_races_endpoint(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[RaceSummaryResponse]:
+    """List all available playable races with descriptions and modifiers."""
+    result = await session.execute(select(Race).order_by(Race.id))
+    races = result.scalars().all()
+    return [
+        RaceSummaryResponse(
+            name=r.name.value,
+            display_name=r.display_name,
+            description=r.description,
+            lore=r.lore,
+            strength_modifier=r.strength_modifier,
+            agility_modifier=r.agility_modifier,
+            intelligence_modifier=r.intelligence_modifier,
+            vitality_modifier=r.vitality_modifier,
+            luck_modifier=r.luck_modifier,
+            racial_trait_name=r.racial_trait_name,
+            racial_trait_description=r.racial_trait_description,
+        )
+        for r in races
+    ]
+
+
+@router.get("/backgrounds", response_model=list[BackgroundSummaryResponse])
+async def list_backgrounds_endpoint(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[BackgroundSummaryResponse]:
+    """List all character backgrounds with descriptions, starting skills, and money."""
+    result = await session.execute(select(Background).order_by(Background.id))
+    backgrounds = result.scalars().all()
+    return [
+        BackgroundSummaryResponse(
+            name=b.name.value,
+            display_name=b.display_name,
+            description=b.description,
+            starting_money=b.starting_money,
+            starting_skills=b.starting_skills,
+        )
+        for b in backgrounds
+    ]
+
+
+@router.get("/current", response_model=CharacterResponse)
+async def get_current_character_endpoint(
+    session_token: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> CharacterResponse:
+    """Get the current generation character associated with the session token."""
+    if not session_token or not session_token.strip():
+        raise ValidationError("session_token must be a non-empty string")
+
+    game_session = await get_or_create_session(session, session_token)
+
+    result = await session.execute(
+        select(Character)
+        .options(
+            selectinload(Character.attributes),
+            selectinload(Character.skills),
+            selectinload(Character.inventory),
+        )
+        .where(
+            Character.session_id == game_session.id,
+            Character.generation == game_session.current_generation,
+        )
+    )
+    character = result.scalar_one_or_none()
+    if character is None:
+        raise NotFoundError("Character", "current generation")
+
+    return _build_character_response(character)

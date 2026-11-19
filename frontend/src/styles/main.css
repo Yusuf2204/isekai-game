@@ -476,3 +476,313 @@ a:focus-visible {
   font-family: monospace;
   color: var(--color-text-muted);
 }
+
+/* ==========================================================================
+   Stage 10 Increment 7: Dark Fantasy Gameplay UI Styles
+   ========================================================================== */
+
+/* Progress Bars */
+.progress-bar {
+  width: 100%;
+  height: 0.875rem;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  transition: width var(--transition-normal);
+}
+
+.progress-bar-health {
+  background: linear-gradient(90deg, #8b2d3a, #b84050);
+}
+
+.progress-bar-stamina {
+  background: linear-gradient(90deg, #3d8b8b, #5ab3b3);
+}
+
+.progress-bar-xp {
+  background: linear-gradient(90deg, #a8822e, #d4a843);
+}
+
+/* Badges & Tags */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-gold {
+  background: rgba(212, 168, 67, 0.15);
+  color: var(--color-accent-gold-light);
+  border: 1px solid rgba(212, 168, 67, 0.4);
+}
+
+.badge-crimson {
+  background: rgba(184, 64, 80, 0.15);
+  color: var(--color-accent-crimson-light);
+  border: 1px solid rgba(184, 64, 80, 0.4);
+}
+
+.badge-teal {
+  background: rgba(61, 139, 139, 0.15);
+  color: var(--color-accent-teal-light);
+  border: 1px solid rgba(61, 139, 139, 0.4);
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border-medium);
+  margin-bottom: var(--space-6);
+  overflow-x: auto;
+}
+
+.nav-tab {
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.nav-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.nav-tab-active {
+  color: var(--color-accent-gold);
+  border-bottom-color: var(--color-accent-gold);
+}
+
+/* Character Header Banner */
+.char-header {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.char-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.resource-gauges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.resource-gauge {
+  background: var(--color-bg-tertiary);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Content Grid */
+.gameplay-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  .gameplay-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Narrative Log Box */
+.narrative-box {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  max-height: 480px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.narrative-entry {
+  padding: var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-left: 3px solid var(--color-accent-gold);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+/* Item Grids & Cards */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.action-card {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  transition: all var(--transition-fast);
+}
+
+.action-card:hover {
+  border-color: var(--color-accent-gold);
+  transform: translateY(-2px);
+}
+
+/* Combat Screen Layout */
+.combat-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.combat-arena {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .combat-arena {
+    grid-template-columns: 1fr;
+  }
+}
+
+.combat-card {
+  background: var(--color-bg-secondary);
+  border: 2px solid var(--color-border-medium);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.combat-card-enemy {
+  border-color: var(--color-accent-crimson);
+}
+
+.combat-card-player {
+  border-color: var(--color-accent-teal);
+}
+
+.combat-log-box {
+  background: #110e10;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.combat-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* Event Modal Overlay */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 8, 9, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: var(--z-modal);
+}
+
+.modal-dialog {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-accent-gold);
+  border-radius: var(--radius-lg);
+  max-width: 640px;
+  width: 100%;
+  padding: var(--space-6);
+  box-shadow: var(--shadow-xl);
+}
+
+.event-choices-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.choice-btn {
+  text-align: left;
+  padding: var(--space-4);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.choice-btn:hover:not(:disabled) {
+  border-color: var(--color-accent-gold);
+  background: var(--color-bg-elevated);
+}
+
+/* Death & Reincarnation Screen */
+.death-hero {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  background: radial-gradient(circle at center, rgba(139, 45, 58, 0.25) 0%, transparent 70%);
+}
+
+.death-title {
+  font-size: var(--font-size-4xl);
+  color: var(--color-accent-crimson-light);
+  letter-spacing: 0.1em;
+  margin-bottom: var(--space-2);
+}
+
+.legacy-box {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-accent-gold);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}

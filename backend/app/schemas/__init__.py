@@ -5,6 +5,8 @@ from app.schemas.character import (
     CharacterCreateRequest,
     CharacterCreateResponse,
     CharacterResponse,
+    RaceSummaryResponse,
+    BackgroundSummaryResponse,
 )
 from app.schemas.world import (
     LocationResponse,
@@ -84,6 +86,8 @@ __all__ = [
     "CharacterCreateRequest",
     "CharacterCreateResponse",
     "CharacterResponse",
+    "RaceSummaryResponse",
+    "BackgroundSummaryResponse",
     "LocationResponse",
     "LocationListResponse",
     "LocationDetailResponse",

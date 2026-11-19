@@ -435,7 +435,7 @@ statuses for different subtasks.
 
 ### STAGE 10 — Incomplete Gameplay Features
 
-- **Status:** IN PROGRESS (Increments 1, 2, 3, 4, 5 & 6 COMPLETED / VERIFIED; Increments 7–8 pending).
+- **Status:** IN PROGRESS (Increments 1, 2, 3, 4, 5, 6 & 7 COMPLETED / VERIFIED; Increment 8 pending).
 - **Increments:**
   1. Event system. (COMPLETED / VERIFIED)
   2. NPC interaction. (COMPLETED / VERIFIED)
@@ -443,7 +443,7 @@ statuses for different subtasks.
   4. Death and legacy. (COMPLETED / VERIFIED)
   5. Reincarnation / next generation. (COMPLETED / VERIFIED)
   6. Session summary. (COMPLETED / VERIFIED)
-  7. Frontend gameplay screens. (PLANNED)
+  7. Frontend gameplay screens. (COMPLETED / VERIFIED)
   8. Integration and acceptance testing. (PLANNED)
 - **Dependencies:** Stages 1–9. Must not be mixed with fundamental bug fixes.
 - **Planning rule:** each increment requires its own plan, branch, approval, and
@@ -545,6 +545,25 @@ statuses for different subtasks.
   - Added 6 comprehensive integration tests in `backend/tests/test_stage10_session_summary.py` verifying single-life summary, multi-generation lineage chains, graceful session conclusion, living character retirement, post-conclusion reincarnation lock, and history listing (6/6 passed).
   - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
   - Finding `IF-05` is closed.
+- **Increment 7 (Frontend Gameplay Screens) Verification Record:**
+  - Implemented all 7 screens per SPEC §12:
+    - `MainMenuScreen`: New Game, Continue Game (localStorage token persistence), and Session History navigation.
+    - `CharacterCreationScreen`: Name input with reroll, Race selection with attribute modifiers and racial trait previews, Background selection with starting money and skill previews, Gender presentation, Ancestral Legacy inherited banner for Generation 2+, and vessel awakening.
+    - `GameplayScreen`: Character header with dynamic health, stamina, fatigue meters, coin tally, day/time tracking with wait action, location narrative banner, chronicled deed log, tabbed panels (Activities, World/Travel, Profile/Attributes/Skills/Inventory, NPCs/Dialogue/Gifting, Conditions/Treatments), and event modal with stat checks.
+    - `CombatScreen`: Turn-based combat arena with enemy/player health bars, stamina tracking, combat log, 5 turn actions (Attack, Defend, Use Skill, Use Item, Flee), and victory/defeat resolution.
+    - `DeathReincarnationScreen`: Dark fantasy mortality banner, full life record obituary, dynamic achievements, ancestral legacy passed down, and Reincarnate into Gen N+1 action.
+    - `SessionSummaryScreen`: Complete generational tapestry with aggregate metrics (total generations, days lived, achievements, active/concluded status), chronological generation cards with obituaries and legacies.
+    - `SessionHistoryScreen`: Archive of past sessions with character rosters and active session resumption.
+  - Built React Context + useReducer authoritative architecture in `frontend/src/context/GameContext.tsx` per AGENTS.md §1 & §3, persisting `session_token` to `localStorage` ensuring sessions survive browser refresh per SPEC §11.3 & §14 Criteria 13.
+  - Added comprehensive TypeScript types in `frontend/src/types/game.ts` mirroring backend Pydantic models.
+  - Expanded `frontend/src/api/client.ts` with all endpoints across Character, World, Time, Activities, Conditions, Inventory, Events, Combat, NPCs, Reincarnation, and Session.
+  - Added backend supporting endpoints `GET /api/character/races`, `GET /api/character/backgrounds`, and `GET /api/character/current` in `backend/app/api/character.py` and schemas in `backend/app/schemas/character.py`.
+  - Added dark fantasy UI styling in `frontend/src/styles/main.css` (health/stamina progress bars, badges, nav tabs, action cards, combat arena, event modal dialog, obituary banners).
+  - Added 6 screen integration tests in `frontend/src/__tests__/screens.test.tsx` (15/15 total frontend tests passed).
+  - Added 3 backend integration tests in `backend/tests/test_character_creation.py` (386/386 backend tests passed).
+  - `npm run lint` clean (0 errors, 0 warnings); `npm run build` clean (Vite bundle built in 771ms).
+  - Development DB hash remained `6f75dfd7201f6fd370b6ab241832bc15cb0bf672dfda7fe77a4940343e369c2f`.
+  - Finding `IF-06` is closed.
 
 ---
 
@@ -570,8 +589,8 @@ statuses for different subtasks.
 - **Stage 7 — Application Startup and World Seeding:** COMPLETED / VERIFIED.
 - **Stage 8 — Frontend Foundation:** COMPLETED / VERIFIED.
 - **Stage 9 — Documentation and Infrastructure:** COMPLETED / VERIFIED.
-- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system), 4 (Death and legacy), 5 (Reincarnation / next generation), and 6 (Session summary) COMPLETED / VERIFIED; Increment 7 (Frontend gameplay screens) is next.
-- **All remediation stages (0 through 9) and Stage 10 Increments 1, 2, 3, 4, 5, and 6 are completed and verified.**
+- **Stage 10 — Incomplete Gameplay Features:** IN PROGRESS. Increments 1 (Event system), 2 (NPC interaction), 3 (Combat system), 4 (Death and legacy), 5 (Reincarnation / next generation), 6 (Session summary), and 7 (Frontend gameplay screens) COMPLETED / VERIFIED; Increment 8 (Integration and acceptance testing) is next.
+- **All remediation stages (0 through 9) and Stage 10 Increments 1, 2, 3, 4, 5, 6, and 7 are completed and verified.**
 
 ---
 
@@ -655,7 +674,7 @@ statuses for different subtasks.
 | IF-03 | Combat system (3–5 enemy types, turn-based actions). | Stage 10 | CLOSED — lightweight turn-based combat engine, initiative, 5 actions, 5 enemies, rewards, and fatalities verified |
 | IF-04 | Death, life record, legacy, reincarnation. | Stage 10 | CLOSED — Death recording, complete soul records (LifeRecord), limited legacy generation, and multi-generation reincarnation (at least 2 generations) verified |
 | IF-05 | Session summary and session history. | Stage 10 | CLOSED — Session summary, multi-generation aggregation, graceful session conclusion, and session history archive verified |
-| IF-06 | Frontend screens: Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary. | Stages 8/10 | OPEN |
+| IF-06 | Frontend screens: Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary. | Stages 8/10 | CLOSED — Main Menu, Character Creation, Gameplay, Profile, Combat, Death/Reincarnation, Session Summary, and History screens implemented and verified |
 | IF-07 | Missing test coverage (inventory, treatment, determinism, frontend). | Ongoing | OPEN |
 | IF-08 | Alembic migrations. | Stage 9 | CLOSED — Alembic async migrations initialized and configured |
 | IF-09 | `app/core/constants.py` for shared constants. | Stage 9 | CLOSED — Created backend/app/core/constants.py and frontend/src/constants.ts |
@@ -686,13 +705,13 @@ has not been closed by a verified remediation stage.
   26 files total under `backend/tests/`.
 - **Canary isolation:** 4 passed (test DB selection, `recreate_db()` on test DB,
   `recreate_db()` rejection of dev DB, dev DB unchanged after test writes).
-- **Ruff check:** 0 errors across entire repository (all 90 files clean).
-- **Ruff format check:** 90 files already cleanly formatted.
-- **Full test suite:** `pytest tests/ -q` — **383 passed**, 361 warnings in 155.86s
-  (2026-11-19, after Stage 10 Increment 6 completion).
-- **Frontend test suite:** `npm test --prefix frontend` — **9 passed**
-  (2026-11-19, after Stage 9 completion).
-- **Frontend build & lint:** `npm run build` succeeds (Vite bundle); `npm run lint` 0 errors.
+- **Ruff check:** 0 errors across entire repository (all 93 files clean).
+- **Ruff format check:** 93 files already cleanly formatted.
+- **Full test suite:** `pytest tests/ -q` — **386 passed**, 364 warnings in 144.19s
+  (2026-11-19, after Stage 10 Increment 7 completion).
+- **Frontend test suite:** `npm test --prefix frontend` — **15 passed** across 2 test files
+  (2026-11-19, after Stage 10 Increment 7 completion).
+- **Frontend build & lint:** `npm run build` succeeds (Vite bundle in 771ms); `npm run lint` 0 errors, 0 warnings.
 - **Stage 2A isolation verification:** `test_time_api.py` — 7 passed standalone;
   `test_character_progression.py` — 14 passed standalone; both together — 21
   passed. TD-03 and PR-11 are closed.
@@ -771,3 +790,4 @@ Do not update this file based only on plans or assumptions.
 | 2026-11-19 | Stage 10 Increment 4 completed: implemented death and legacy system with authoritative death recording in app.services.reincarnation.death, complete soul records (LifeRecord) with dynamic achievements, deterministic legacy generation (CharacterLegacy) with single-trait constraint (AGENTS.md §14), idempotency, combat defeat and event fatality automatic triggers, /api/reincarnation router, 11 integration tests in test_stage10_death_and_legacy.py (11/11 passed), full backend test suite (369 passed), 0 Ruff errors across 88 files, preserved dev DB hash. Partially closed IF-04. |
 | 2026-11-19 | Stage 10 Increment 5 completed: implemented multi-generation reincarnation system with session token validation (PR-02), living character reincarnation guards (409 GameStateError), limited legacy perk inheritance (attribute, skill, money, dreams), GameplayState session migration, GET /api/reincarnation/status, POST /api/reincarnation/reincarnate, 8 integration tests in test_stage10_reincarnation_system.py (8/8 passed), full backend test suite (377 passed), 0 Ruff errors across 89 files, preserved dev DB hash. Closed PR-02 and IF-04. |
 | 2026-11-19 | Stage 10 Increment 6 completed: implemented session summary and history archive in app.services.game.session (IF-05); established schemas in app.schemas.session; created endpoints GET /api/session/summary, POST /api/session/end, GET /api/session/history; multi-generation chronological records, aggregate stats, and graceful session conclusion; added 6 integration tests in test_stage10_session_summary.py (6/6 passed); 0 Ruff errors across 90 files; full backend test suite (383 passed); preserved dev DB hash. Closed IF-05. |
+| 2026-11-19 | Stage 10 Increment 7 completed: implemented complete frontend gameplay screens per SPEC §12 (MainMenu, CharacterCreation, Gameplay, Combat, DeathReincarnation, SessionSummary, SessionHistory) with React Context + useReducer authoritative architecture (IF-06); added supporting backend endpoints GET /api/character/races, GET /api/character/backgrounds, GET /api/character/current; added dark fantasy styles in styles/main.css; added 6 screen integration tests in screens.test.tsx (15/15 passed); 386 backend tests passed; 0 Ruff errors across 93 files; preserved dev DB hash. Closed IF-06. |

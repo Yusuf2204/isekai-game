@@ -496,5 +496,100 @@ async def test_create_character_health_calculation():
     assert character["current_health"] == 185
 
 
+@pytest.mark.asyncio
+async def test_list_races_endpoint():
+    """Test retrieving all playable races with modifiers."""
+    await recreate_db()
+
+    async with get_session() as session:
+        await seed_world(session)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/character/races")
+
+    assert response.status_code == 200
+    races = response.json()
+    assert len(races) == 6
+    race_names = [r["name"] for r in races]
+    assert "human" in race_names
+    assert "elf" in race_names
+    assert "dwarf" in race_names
+    assert "beastkin" in race_names
+    assert "dragonkin" in race_names
+    assert "demonkin" in race_names
+
+    human = next(r for r in races if r["name"] == "human")
+    assert human["display_name"] == "Human"
+    assert human["racial_trait_name"] == "Adaptable Spirit"
+
+
+@pytest.mark.asyncio
+async def test_list_backgrounds_endpoint():
+    """Test retrieving all character backgrounds with starting gold and skills."""
+    await recreate_db()
+
+    async with get_session() as session:
+        await seed_world(session)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/character/backgrounds")
+
+    assert response.status_code == 200
+    bgs = response.json()
+    assert len(bgs) == 5
+    bg_names = [b["name"] for b in bgs]
+    assert "commoner" in bg_names
+    assert "merchant_family" in bg_names
+    assert "orphan" in bg_names
+    assert "noble_descendant" in bg_names
+    assert "former_slave" in bg_names
+
+    noble = next(b for b in bgs if b["name"] == "noble_descendant")
+    assert noble["starting_money"] == 300
+
+
+@pytest.mark.asyncio
+async def test_get_current_character_endpoint():
+    """Test getting current character by session token."""
+    await recreate_db()
+
+    async with get_session() as session:
+        await seed_world(session)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        create_resp = await client.post(
+            "/api/character/create",
+            json={
+                "name": "Current Hero",
+                "race_name": "elf",
+                "background_name": "merchant_family",
+                "gender_presentation": "female",
+            },
+        )
+        assert create_resp.status_code == 201
+        session_token = create_resp.json()["session_token"]
+
+        # Fetch current character
+        resp = await client.get(f"/api/character/current?session_token={session_token}")
+        assert resp.status_code == 200
+        char = resp.json()
+        assert char["name"] == "Current Hero"
+        assert char["race_name"] == "elf"
+        assert char["background_name"] == "merchant_family"
+        assert char["is_alive"] is True
+        assert len(char["attributes"]) == 5
+        assert len(char["skills"]) > 0
+
+        # Empty session token returns 400
+        bad_resp = await client.get("/api/character/current?session_token=")
+        assert bad_resp.status_code == 400
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

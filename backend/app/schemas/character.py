@@ -197,3 +197,29 @@ class ResourceStatusResponse(BaseModel):
     is_alive: bool
     money: int
     penalties: PenaltyStatusResponse
+
+
+class RaceSummaryResponse(BaseModel):
+    """Summary response for playable races."""
+
+    name: str
+    display_name: str
+    description: str
+    lore: str
+    strength_modifier: int
+    agility_modifier: int
+    intelligence_modifier: int
+    vitality_modifier: int
+    luck_modifier: int
+    racial_trait_name: str
+    racial_trait_description: str
+
+
+class BackgroundSummaryResponse(BaseModel):
+    """Summary response for character backgrounds."""
+
+    name: str
+    display_name: str
+    description: str
+    starting_money: int
+    starting_skills: dict[str, int]
