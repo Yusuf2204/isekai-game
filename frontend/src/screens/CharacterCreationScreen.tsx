@@ -305,7 +305,7 @@ export const CharacterCreationScreen: React.FC = () => {
                     Starting Gold: {currentBgObj.starting_money} coins
                   </span>
                   <span className="text-muted">
-                    Starting Skills: {Object.entries(currentBgObj.starting_skills).map(([sk, lv]) => `${sk} (Lv.${lv})`).join(', ')}
+                    Starting Skills: {currentBgObj.starting_skills ? Object.entries(currentBgObj.starting_skills).map(([sk, lv]) => `${sk} (Lv.${lv})`).join(', ') : 'None'}
                   </span>
                 </div>
               </div>

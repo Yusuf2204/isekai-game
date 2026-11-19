@@ -317,9 +317,11 @@ export interface EventChoiceOption {
 }
 
 export interface ActiveEvent {
-  event_id: string;
+  id?: string;
+  event_id?: string;
   title: string;
-  narrative: string;
+  description?: string;
+  narrative?: string;
   category: string;
   choices: EventChoiceOption[];
 }
@@ -374,10 +376,11 @@ export interface CombatState {
   player: CombatPlayerStatus;
   combat_log: string[];
   rewards?: {
-    character_xp: number;
-    skill_xp: Record<string, number>;
-    money: number;
-    loot: CharacterInventoryItem[];
+    character_xp?: number;
+    skill_xp?: Record<string, number>;
+    money?: number;
+    loot?: CharacterInventoryItem[];
+    loot_gained?: string[];
   } | null;
 }
 
@@ -388,10 +391,11 @@ export interface CombatActionResponse {
   enemy: CombatEnemy;
   combat_log: string[];
   rewards?: {
-    character_xp: number;
-    skill_xp: Record<string, number>;
-    money: number;
-    loot: CharacterInventoryItem[];
+    character_xp?: number;
+    skill_xp?: Record<string, number>;
+    money?: number;
+    loot?: CharacterInventoryItem[];
+    loot_gained?: string[];
   } | null;
   character_died: boolean;
   death_cause?: string | null;
@@ -552,31 +556,37 @@ export interface ReincarnateRequest {
 // --- Session & History ---
 
 export interface SessionSummaryCharacter {
-  id: number;
+  id?: number;
+  character_id?: number;
   generation: number;
   name: string;
   race_name: string;
   background_name: string;
   is_alive: boolean;
   age: number;
-  days_lived: number;
-  money: number;
+  days_lived?: number;
+  money?: number;
   death_cause?: string | null;
+  cause_of_death?: string | null;
   obituary?: string | null;
+  death_description?: string | null;
   legacy_left?: CharacterLegacy | null;
   legacy_inherited?: CharacterLegacy | null;
-  achievements: string[];
+  achievements?: string[];
 }
 
 export interface SessionSummaryResponse {
   session_id: number;
   session_token: string;
   is_active: boolean;
-  current_generation: number;
-  total_characters: number;
-  total_days_lived: number;
-  total_achievements: number;
-  characters: SessionSummaryCharacter[];
+  current_generation?: number;
+  total_generations?: number;
+  total_characters?: number;
+  total_days_lived?: number;
+  total_time_lived?: number;
+  total_achievements?: number;
+  characters?: SessionSummaryCharacter[];
+  characters_created?: SessionSummaryCharacter[];
 }
 
 export interface SessionHistoryItem {

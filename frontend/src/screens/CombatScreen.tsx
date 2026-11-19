@@ -144,7 +144,7 @@ export const CombatScreen: React.FC = () => {
           Combat Chronicle
         </h4>
         <div className="combat-log-box">
-          {combat_log.map((log, index) => (
+          {(combat_log || []).map((log, index) => (
             <div key={index} style={{ color: log.includes('defeats') || log.includes('CRITICAL') ? 'var(--color-accent-gold-light)' : 'var(--color-text-secondary)' }}>
               &gt; {log}
             </div>
@@ -161,11 +161,16 @@ export const CombatScreen: React.FC = () => {
           <p className="text-secondary mb-4">The beast has fallen before your blade and resolve.</p>
           {rewards && (
             <div className="flex justify-center gap-4 mb-4" style={{ flexWrap: 'wrap' }}>
-              <span className="badge badge-gold">+{rewards.character_xp} Character XP</span>
-              <span className="badge badge-gold">+{rewards.money} Gold Coins</span>
-              {rewards.loot.map((it) => (
-                <span key={it.item_id} className="badge badge-teal">
+              <span className="badge badge-gold">+{rewards.character_xp || 0} Character XP</span>
+              <span className="badge badge-gold">+{rewards.money || 0} Gold Coins</span>
+              {Array.isArray(rewards.loot) && rewards.loot.map((it) => (
+                <span key={it.item_id || it.name} className="badge badge-teal">
                   Looted: {it.name}
+                </span>
+              ))}
+              {Array.isArray(rewards.loot_gained) && rewards.loot_gained.map((itName, idx) => (
+                <span key={idx} className="badge badge-teal">
+                  Looted: {itName}
                 </span>
               ))}
             </div>

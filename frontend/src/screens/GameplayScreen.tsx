@@ -413,7 +413,7 @@ export const GameplayScreen: React.FC = () => {
                 Kingdom of Eldoria — Waypoints & Settlements
               </h3>
               <div className="grid-cards">
-                {locations.map((loc: LocationSummary) => {
+                {(locations || []).map((loc: LocationSummary) => {
                   const isCurrent = currentLocation?.location?.id === loc.id;
                   return (
                     <div
@@ -480,7 +480,7 @@ export const GameplayScreen: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                  {character.attributes.map((attr) => (
+                  {(character.attributes || []).map((attr) => (
                     <div
                       key={attr.name}
                       style={{
@@ -529,11 +529,11 @@ export const GameplayScreen: React.FC = () => {
                 <div className="card-header">
                   <h3 className="card-title">Developed Skills</h3>
                 </div>
-                {character.skills.length === 0 ? (
+                {!character.skills || character.skills.length === 0 ? (
                   <p className="text-muted">No specialized skills developed yet. Perform work or explore to cultivate skills.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-                    {character.skills.map((skill) => (
+                    {(character.skills || []).map((skill) => (
                       <div
                         key={skill.name}
                         style={{
@@ -563,11 +563,11 @@ export const GameplayScreen: React.FC = () => {
                 <div className="card-header">
                   <h3 className="card-title">Inventory</h3>
                 </div>
-                {character.inventory.length === 0 ? (
+                {!character.inventory || character.inventory.length === 0 ? (
                   <p className="text-muted">Empty knapsack.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-                    {character.inventory.map((item) => (
+                    {(character.inventory || []).map((item) => (
                       <div
                         key={item.item_id}
                         style={{
@@ -626,11 +626,11 @@ export const GameplayScreen: React.FC = () => {
                 </div>
               )}
 
-              {locationNpcs.length === 0 ? (
+              {!locationNpcs || locationNpcs.length === 0 ? (
                 <p className="text-muted">No notable figures present here at this hour.</p>
               ) : (
                 <div className="grid-cards">
-                  {locationNpcs.map((npc) => (
+                  {(locationNpcs || []).map((npc) => (
                     <div key={npc.id} className="action-card">
                       <div>
                         <div className="flex justify-between items-center mb-1">
@@ -686,13 +686,13 @@ export const GameplayScreen: React.FC = () => {
               <h3 className="font-display text-gold mb-3" style={{ fontSize: '1.25rem' }}>
                 Afflictions, Injuries & Treatments
               </h3>
-              {conditions.length === 0 ? (
+              {!conditions || conditions.length === 0 ? (
                 <div className="card text-center text-muted" style={{ padding: '2rem' }}>
                   🌱 The body is whole and free of mortal afflictions.
                 </div>
               ) : (
                 <div className="card-stack">
-                  {conditions.map((cond) => (
+                  {(conditions || []).map((cond) => (
                     <div
                       key={cond.id}
                       className="card"
@@ -735,7 +735,7 @@ export const GameplayScreen: React.FC = () => {
                             Available Remedies:
                           </h5>
                           <div className="flex flex-col gap-2">
-                            {availableTreatments.treatments.map((t) => (
+                            {(availableTreatments.treatments || []).map((t) => (
                               <div
                                 key={t.id}
                                 className="flex justify-between items-center"
@@ -786,12 +786,12 @@ export const GameplayScreen: React.FC = () => {
               <h3 className="card-title">Chronicle of Deeds</h3>
             </div>
             <div className="narrative-box">
-              {narrativeLogs.length === 0 ? (
+              {!narrativeLogs || narrativeLogs.length === 0 ? (
                 <p className="text-muted" style={{ fontStyle: 'italic', fontSize: '0.8125rem' }}>
                   The chronicle pages await your deeds...
                 </p>
               ) : (
-                narrativeLogs.map((log, index) => (
+                (narrativeLogs || []).map((log, index) => (
                   <div key={index} className="narrative-entry">
                     {log}
                   </div>
@@ -803,7 +803,7 @@ export const GameplayScreen: React.FC = () => {
       </div>
 
       {/* --- Event Modal Overlay --- */}
-      {activeEvent && (
+      {activeEvent && Array.isArray(activeEvent.choices) && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-dialog">
             <div className="flex justify-between items-center mb-3">
@@ -813,11 +813,11 @@ export const GameplayScreen: React.FC = () => {
               {activeEvent.title}
             </h2>
             <p className="text-primary mb-6" style={{ lineHeight: '1.6', fontSize: '0.9375rem' }}>
-              {activeEvent.narrative}
+              {activeEvent.narrative || activeEvent.description}
             </p>
 
             <div className="event-choices-list">
-              {activeEvent.choices.map((choice) => (
+              {(activeEvent.choices || []).map((choice) => (
                 <button
                   key={choice.id}
                   className="choice-btn"

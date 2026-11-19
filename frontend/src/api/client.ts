@@ -299,20 +299,40 @@ export class ApiClient {
   }
 
   // --- Events ---
-  async getActiveEvent(sessionToken: string): Promise<ActiveEvent> {
-    return this.get<ActiveEvent>(`/api/events/active?session_token=${encodeURIComponent(sessionToken)}`);
+  async getActiveEvent(sessionToken: string): Promise<ActiveEvent | null> {
+    const resp = await this.get<{
+      has_active_event: boolean;
+      event: (ActiveEvent & { id?: string; description?: string }) | null;
+    }>(`/api/events/active?session_token=${encodeURIComponent(sessionToken)}`);
+    if (!resp || !resp.has_active_event || !resp.event) return null;
+    return {
+      ...resp.event,
+      event_id: resp.event.event_id || resp.event.id || '',
+      narrative: resp.event.narrative || resp.event.description || '',
+      choices: resp.event.choices || [],
+    };
   }
 
   async triggerEvent(
     sessionToken: string,
     eventId?: string,
     forceTrigger: boolean = false
-  ): Promise<ActiveEvent> {
-    return this.post<ActiveEvent>('/api/events/trigger', {
+  ): Promise<ActiveEvent | null> {
+    const resp = await this.post<{
+      has_active_event: boolean;
+      event: (ActiveEvent & { id?: string; description?: string }) | null;
+    }>('/api/events/trigger', {
       session_token: sessionToken,
       event_id: eventId,
       force_trigger: forceTrigger,
     });
+    if (!resp || !resp.has_active_event || !resp.event) return null;
+    return {
+      ...resp.event,
+      event_id: resp.event.event_id || resp.event.id || '',
+      narrative: resp.event.narrative || resp.event.description || '',
+      choices: resp.event.choices || [],
+    };
   }
 
   async chooseEvent(sessionToken: string, choiceId: string): Promise<EventResolutionResponse> {

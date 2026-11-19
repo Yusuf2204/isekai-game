@@ -96,9 +96,9 @@ export const SessionSummaryScreen: React.FC = () => {
           </h2>
 
           <div className="card-stack mb-8">
-            {summary.characters.map((char) => (
+            {(summary.characters_created || summary.characters || []).map((char) => (
               <div
-                key={char.id}
+                key={char.id || char.character_id}
                 className="card"
                 style={{
                   borderLeft: `4px solid ${char.is_alive ? 'var(--color-success)' : 'var(--color-accent-gold)'}`,
@@ -114,18 +114,18 @@ export const SessionSummaryScreen: React.FC = () => {
                       <span className="badge">{char.background_name}</span>
                     </div>
                     <div className="text-muted" style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>
-                      Survived: <strong>{char.days_lived} days</strong> &bull; Wealth: <strong>{char.money} gold</strong>
+                      Survived: <strong>{char.days_lived || char.age || 0} days</strong> &bull; Wealth: <strong>{char.money || 0} gold</strong>
                     </div>
                   </div>
 
                   <span className={`badge ${char.is_alive ? 'badge-teal' : 'badge-crimson'}`}>
-                    {char.is_alive ? 'Living' : char.death_cause ? `Fallen (${char.death_cause})` : 'Retired'}
+                    {char.is_alive ? 'Living' : char.death_cause || char.cause_of_death ? `Fallen (${char.death_cause || char.cause_of_death})` : 'Retired'}
                   </span>
                 </div>
 
-                {char.obituary && (
+                {(char.obituary || char.death_description) && (
                   <p className="text-secondary mt-2 mb-3" style={{ fontStyle: 'italic', fontSize: '0.875rem' }}>
-                    "{char.obituary}"
+                    "{char.obituary || char.death_description}"
                   </p>
                 )}
 
@@ -147,7 +147,7 @@ export const SessionSummaryScreen: React.FC = () => {
                 )}
 
                 {/* Achievements */}
-                {char.achievements && char.achievements.length > 0 && (
+                {Array.isArray(char.achievements) && char.achievements.length > 0 && (
                   <div className="flex gap-2 mt-3 flex-wrap">
                     {char.achievements.map((ach, idx) => (
                       <span key={idx} className="badge badge-gold">
