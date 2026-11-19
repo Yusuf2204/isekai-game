@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -95,3 +96,15 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+if __name__ == "__main__":
+    import uvicorn
+    from app.core.network import resolve_server_port
+
+    effective_port = resolve_server_port(
+        preferred_port=settings.api_port, host=settings.api_host
+    )
+    logger.info("Starting Isekai Backend on http://localhost:%d", effective_port)
+    uvicorn.run(
+        "app.main:app", host=settings.api_host, port=effective_port, reload=True
+    )
