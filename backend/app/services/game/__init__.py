@@ -17,6 +17,11 @@ from app.services.character.progression import (
     grant_character_xp,
     get_character_progression,
 )
+from app.services.game.session import (
+    end_session,
+    get_session_summary,
+    list_session_history,
+)
 
 __all__ = [
     "get_current_time_state",
@@ -30,4 +35,7 @@ __all__ = [
     "perform_work",
     "grant_character_xp",
     "get_character_progression",
+    "end_session",
+    "get_session_summary",
+    "list_session_history",
 ]

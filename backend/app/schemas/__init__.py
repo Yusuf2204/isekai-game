@@ -71,6 +71,13 @@ from app.schemas.reincarnation import (
     ReincarnationResponse,
     ReincarnationStatusResponse,
 )
+from app.schemas.session import (
+    EndSessionRequest,
+    SessionHistoryItemSchema,
+    SessionHistoryResponse,
+    SessionSummaryCharacterSchema,
+    SessionSummaryResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -128,4 +135,9 @@ __all__ = [
     "ReincarnateRequest",
     "ReincarnationResponse",
     "ReincarnationStatusResponse",
+    "EndSessionRequest",
+    "SessionHistoryItemSchema",
+    "SessionHistoryResponse",
+    "SessionSummaryCharacterSchema",
+    "SessionSummaryResponse",
 ]
