@@ -30,6 +30,7 @@ from app.schemas.events import (
 from app.services.character.conditions import add_condition
 from app.services.character.progression import grant_skill_xp
 from app.services.events.definitions import EVENT_DEFINITIONS, EVENTS_BY_ID
+from app.services.reincarnation.death import record_death
 
 
 def _sanitize_event_for_display(event: dict[str, Any]) -> EventDisplaySchema:
@@ -434,6 +435,12 @@ async def resolve_event_choice(
         character.age_at_death = character.age
         character_dead = True
         death_cause = DeathCause.EVENT_CONSEQUENCES.value
+        await record_death(
+            session=session,
+            character_id=character.id,
+            cause=DeathCause.EVENT_CONSEQUENCES,
+            death_description=character.death_description,
+        )
 
     # 10. Clear active event on GameplayState
     gameplay_state.active_event_id = None

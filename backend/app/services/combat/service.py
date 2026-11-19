@@ -23,6 +23,7 @@ from app.models.gameplay import (
 )
 from app.models.world import Enemy
 from app.services.character.progression import grant_character_xp, grant_skill_xp
+from app.services.reincarnation.death import record_death
 
 
 async def _get_character_combat_stats(
@@ -477,6 +478,12 @@ async def execute_combat_turn(
 
             turn_logs.append(
                 f"Your wounds are too severe... You have been slain by the {enemy_data['display_name']}!"
+            )
+            await record_death(
+                session=session,
+                character_id=char.id,
+                cause=DeathCause.COMBAT,
+                death_description=char.death_description,
             )
 
     combat_state["turn"] += 1

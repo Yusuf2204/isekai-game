@@ -61,6 +61,13 @@ from app.schemas.combat import (
     CombatStartRequest,
     CombatStateResponse,
 )
+from app.schemas.reincarnation import (
+    CharacterLegacyResponse,
+    DeathRecordRequest,
+    DeathSummaryResponse,
+    LifeRecordListResponse,
+    LifeRecordResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -110,4 +117,9 @@ __all__ = [
     "CombatPlayerStatusSchema",
     "CombatStartRequest",
     "CombatStateResponse",
+    "CharacterLegacyResponse",
+    "DeathRecordRequest",
+    "DeathSummaryResponse",
+    "LifeRecordListResponse",
+    "LifeRecordResponse",
 ]
