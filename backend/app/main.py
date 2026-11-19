@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import close_db, get_session, init_db
 from app.core.errors import register_error_handlers
+from app.core.logging import setup_logging
 from app.api.health import router as health_router
 from app.api.character import router as character_router
 from app.api.world import router as world_router
@@ -42,6 +43,7 @@ async def seed_world_at_startup() -> dict | None:
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
+    setup_logging()
     await init_db()
     await seed_world_at_startup()
     yield
